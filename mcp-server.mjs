@@ -46,7 +46,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "add_memory",
-        description: "Add a new lesson learned, architectural decision, or active context to the connected project's memory bank.",
+        description: "Add a new lesson learned, architectural decision, or active context to the connected project's memory bank with optional knowledge graph entity tagging.",
         inputSchema: {
           type: "object",
           properties: {
@@ -56,8 +56,26 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
               enum: ["activeContext", "lessonsLearned", "architecture", "general"],
               description: "The category of this memory" 
             },
+            entities: {
+              type: "array",
+              items: { type: "string" },
+              description: "Optional list of tech stack entities or component keywords (e.g., ['Next.js', 'Supabase', 'Auth'])"
+            },
+            related_memory_ids: {
+              type: "array",
+              items: { type: "string" },
+              description: "Optional list of UUIDs of past related memories to connect in the knowledge graph"
+            }
           },
           required: ["content", "type"],
+        },
+      },
+      {
+        name: "get_project_profile",
+        description: "Get an instant <50ms profile of the connected project including static architecture facts, active context, and top knowledge graph nodes.",
+        inputSchema: {
+          type: "object",
+          properties: {},
         },
       }
     ],
@@ -69,8 +87,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   try {
     const { name, arguments: args } = request.params;
 
-    if (name === "search_memory" || name === "add_memory") {
-      const endpoint = name === "search_memory" ? "/search" : "/add";
+    if (name === "search_memory" || name === "add_memory" || name === "get_project_profile") {
+      let endpoint = "/search";
+      if (name === "add_memory") endpoint = "/add";
+      if (name === "get_project_profile") endpoint = "/profile";
       
       const response = await fetch(`${NEXT_JS_API_URL}${endpoint}`, {
         method: "POST",
@@ -78,7 +98,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${API_KEY}`
         },
-        body: JSON.stringify(args),
+        body: JSON.stringify(args || {}),
       });
       
       const result = await response.json();

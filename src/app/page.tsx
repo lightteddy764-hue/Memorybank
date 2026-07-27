@@ -1,6 +1,7 @@
 import { supabaseAdmin } from '@/utils/supabase/server';
 import { getUserIp } from '@/app/actions';
 import CreateProjectForm from '@/components/CreateProjectForm';
+import KnowledgeGraph from '@/components/KnowledgeGraph';
 
 // Opt out of static rendering so we always see the latest projects
 export const dynamic = 'force-dynamic';
@@ -15,6 +16,17 @@ export default async function Home() {
     .eq('user_ip', userIp)
     .order('created_at', { ascending: false });
 
+  const projectIds = (projects || []).map(p => p.id);
+  let memories: any[] = [];
+  if (projectIds.length > 0) {
+    const { data: memData } = await supabaseAdmin
+      .from('memories')
+      .select('*')
+      .in('project_id', projectIds)
+      .order('created_at', { ascending: false });
+    memories = memData || [];
+  }
+
   return (
     <main className="container">
       <header className="mb-8" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '2rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '1rem' }}>
@@ -23,13 +35,17 @@ export default async function Home() {
           <p style={{ margin: 0, fontSize: '0.9rem', color: '#a1a1aa' }}>Frictionless access via IP: <span style={{ color: '#10b981', fontFamily: 'monospace' }}>{userIp}</span></p>
         </div>
         <div style={{ fontSize: '0.8rem', color: '#a1a1aa', background: 'rgba(255,255,255,0.05)', padding: '0.4rem 0.8rem', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.1)' }}>
-          ⚡ Zero-Login Onboarding
+          ⚡ Zero-Login AI Superhouse
         </div>
       </header>
 
-      <div style={{ marginBottom: '2rem' }}>
+      <div style={{ marginBottom: '2.5rem' }}>
         <CreateProjectForm />
       </div>
+
+      <section style={{ marginBottom: '3rem' }}>
+        <KnowledgeGraph memories={memories} />
+      </section>
 
       <section className="grid-auto mt-8">
         <div className="glass-panel">
@@ -67,15 +83,57 @@ export default async function Home() {
         </div>
 
         <div className="glass-panel">
-          <h2>Recent Activity</h2>
-          <p style={{ fontSize: '0.9rem', color: '#a1a1aa' }}>Memories added by your AI will appear here in real-time as you code.</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="glass-card" style={{ opacity: 0.3 }}>
-                <div style={{ width: '100%', height: '16px', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: '4px', marginBottom: '8px' }}></div>
-                <div style={{ width: '60%', height: '16px', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: '4px' }}></div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+            <h2 style={{ margin: 0 }}>Recent Activity Feed</h2>
+            <span style={{ fontSize: '0.8rem', color: '#a1a1aa', background: 'rgba(255,255,255,0.08)', padding: '0.2rem 0.6rem', borderRadius: '4px' }}>
+              {memories.length} memories
+            </span>
+          </div>
+          <p style={{ fontSize: '0.9rem', color: '#a1a1aa' }}>Memories added by your AI appear here in real-time as you code.</p>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem', maxHeight: '550px', overflowY: 'auto', paddingRight: '0.5rem' }}>
+            {memories.length === 0 ? (
+              <div className="glass-card" style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>
+                No memories saved yet. Start coding with your AI assistant!
               </div>
-            ))}
+            ) : (
+              memories.map((mem) => {
+                const badgeColors: Record<string, string> = {
+                  activeContext: 'rgba(16, 185, 129, 0.2)',
+                  lessonsLearned: 'rgba(139, 92, 246, 0.2)',
+                  architecture: 'rgba(6, 182, 212, 0.2)',
+                  general: 'rgba(245, 158, 11, 0.2)',
+                };
+                const textColors: Record<string, string> = {
+                  activeContext: '#34d399',
+                  lessonsLearned: '#a78bfa',
+                  architecture: '#22d3ee',
+                  general: '#fbbf24',
+                };
+                return (
+                  <div key={mem.id} className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', borderLeft: `3px solid ${textColors[mem.type] || '#fff'}` }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 600, padding: '0.2rem 0.5rem', borderRadius: '4px', background: badgeColors[mem.type] || 'rgba(255,255,255,0.1)', color: textColors[mem.type] || '#fff' }}>
+                        {mem.type}
+                      </span>
+                      <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                        {new Date(mem.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                    <p style={{ fontSize: '0.9rem', color: '#f8fafc', margin: 0, lineHeight: 1.5 }}>{mem.content}</p>
+                    {mem.entities && mem.entities.length > 0 && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.2rem' }}>
+                        {mem.entities.map((ent: string, idx: number) => (
+                          <span key={idx} style={{ fontSize: '0.7rem', color: '#ec4899', background: 'rgba(236, 72, 153, 0.1)', padding: '0.1rem 0.4rem', borderRadius: '4px', border: '1px solid rgba(236, 72, 153, 0.2)' }}>
+                            #{ent}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
       </section>

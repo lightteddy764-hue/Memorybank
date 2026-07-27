@@ -18,7 +18,9 @@ create table memories (
   project_id uuid references projects(id) on delete cascade not null,
   content text not null,
   type text not null, -- e.g., 'activeContext', 'lessonsLearned', 'architecture'
-  embedding vector(768), -- Assuming a 768-dimensional embedding model (like Nomic or Google)
+  entities text[], -- Knowledge graph entity tags
+  related_memory_ids uuid[], -- Connected memory edges
+  embedding vector(768), -- Assuming a 768-dimensional embedding model
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   updated_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
