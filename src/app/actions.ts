@@ -12,6 +12,13 @@ export async function getUserIp() {
 }
 
 export async function createProject(formData: FormData) {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL.includes('placeholder')) {
+    return { error: 'Missing Render Env Var: Please add NEXT_PUBLIC_SUPABASE_URL to your Render dashboard settings!' };
+  }
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY.includes('placeholder')) {
+    return { error: 'Missing Render Env Var: Please add SUPABASE_SERVICE_ROLE_KEY to your Render dashboard settings!' };
+  }
+
   const ip = await getUserIp();
   
   const name = formData.get('name') as string;
