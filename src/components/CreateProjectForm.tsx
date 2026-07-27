@@ -3,10 +3,23 @@
 import { useState } from 'react';
 import { createProject } from '@/app/actions';
 
-export default function CreateProjectForm() {
+export default function CreateProjectForm({ 
+  externalOpen, 
+  onCloseExternal 
+}: { 
+  externalOpen?: boolean; 
+  onCloseExternal?: () => void; 
+} = {}) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [isOpen, setIsOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+
+  const isOpen = externalOpen !== undefined ? externalOpen : internalOpen;
+
+  const handleClose = () => {
+    if (onCloseExternal) onCloseExternal();
+    else setInternalOpen(false);
+  };
 
   async function handleSubmit(formData: FormData) {
     setLoading(true);
@@ -15,14 +28,14 @@ export default function CreateProjectForm() {
     if (res && res.error) {
       setError(res.error);
     } else {
-      setIsOpen(false);
+      handleClose();
     }
     setLoading(false);
   }
 
   if (!isOpen) {
     return (
-      <button onClick={() => setIsOpen(true)} className="btn-primary">
+      <button onClick={() => setInternalOpen(true)} className="btn-primary">
         + Create New Project
       </button>
     );
@@ -33,7 +46,7 @@ export default function CreateProjectForm() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
         <h3 style={{ margin: 0, color: '#fff' }}>Create a New Memory Bank Project</h3>
         <button 
-          onClick={() => setIsOpen(false)} 
+          onClick={handleClose} 
           style={{ background: 'none', border: 'none', color: '#a1a1aa', cursor: 'pointer', fontSize: '1.2rem' }}
         >
           ✕
@@ -88,7 +101,7 @@ export default function CreateProjectForm() {
         <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
           <button 
             type="button" 
-            onClick={() => setIsOpen(false)}
+            onClick={handleClose}
             style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.2)', color: '#fff', padding: '0.5rem 1rem', borderRadius: '8px', cursor: 'pointer' }}
           >
             Cancel
