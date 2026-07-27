@@ -7,7 +7,7 @@ import {
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 
-const NEXT_JS_API_URL = "https://memorybank-z4dd.onrender.com/api/memory";
+const NEXT_JS_API_BASE = process.env.NEXT_JS_API_BASE || "https://memorybank-z4dd.onrender.com/api";
 const API_KEY = process.env.MEMORY_BANK_API_KEY;
 
 if (!API_KEY) {
@@ -77,6 +77,26 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           type: "object",
           properties: {},
         },
+      },
+      {
+        name: "create_project",
+        description: "Create a new Memory Bank project directly from your IDE/AI workspace so you can scope memories for a new repository or feature.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            name: { type: "string", description: "The name of the new project (e.g. 'Backend Service')" },
+            description: { type: "string", description: "Optional summary of what this project is for" }
+          },
+          required: ["name"],
+        },
+      },
+      {
+        name: "list_projects",
+        description: "List all existing Memory Bank projects under your account/IP so you can see available project IDs, names, and API keys.",
+        inputSchema: {
+          type: "object",
+          properties: {},
+        },
       }
     ],
   };
@@ -87,12 +107,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   try {
     const { name, arguments: args } = request.params;
 
-    if (name === "search_memory" || name === "add_memory" || name === "get_project_profile") {
-      let endpoint = "/search";
-      if (name === "add_memory") endpoint = "/add";
-      if (name === "get_project_profile") endpoint = "/profile";
+    if (name === "search_memory" || name === "add_memory" || name === "get_project_profile" || name === "create_project" || name === "list_projects") {
+      let endpoint = "/memory/search";
+      if (name === "add_memory") endpoint = "/memory/add";
+      if (name === "get_project_profile") endpoint = "/memory/profile";
+      if (name === "create_project") endpoint = "/project/create";
+      if (name === "list_projects") endpoint = "/project/list";
       
-      const response = await fetch(`${NEXT_JS_API_URL}${endpoint}`, {
+      const response = await fetch(`${NEXT_JS_API_BASE}${endpoint}`, {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
