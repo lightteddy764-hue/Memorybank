@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
@@ -5,7 +6,14 @@ import {
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 
-const NEXT_JS_API_URL = "http://localhost:3000/api/memory";
+const NEXT_JS_API_URL = "https://memorybank-z4dd.onrender.com/api/memory";
+const API_KEY = process.env.MEMORY_BANK_API_KEY;
+
+if (!API_KEY) {
+  console.error("Error: MEMORY_BANK_API_KEY environment variable is required.");
+  console.error("You can generate this key in your Memory Bank dashboard.");
+  process.exit(1);
+}
 
 // Initialize the MCP Server
 const server = new Server(
@@ -26,23 +34,21 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
     tools: [
       {
         name: "search_memory",
-        description: "Search the project memory bank for past context, architecture decisions, or lessons learned.",
+        description: "Search the connected project's memory bank for past context, architecture decisions, or lessons learned.",
         inputSchema: {
           type: "object",
           properties: {
-            projectId: { type: "string", description: "The UUID of the project" },
             query: { type: "string", description: "What to search for" },
           },
-          required: ["projectId", "query"],
+          required: ["query"],
         },
       },
       {
         name: "add_memory",
-        description: "Add a new lesson learned, architectural decision, or active context to the memory bank.",
+        description: "Add a new lesson learned, architectural decision, or active context to the connected project's memory bank.",
         inputSchema: {
           type: "object",
           properties: {
-            projectId: { type: "string", description: "The UUID of the project" },
             content: { type: "string", description: "The detailed context or lesson to save" },
             type: { 
               type: "string", 
@@ -50,7 +56,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
               description: "The category of this memory" 
             },
           },
-          required: ["projectId", "content", "type"],
+          required: ["content", "type"],
         },
       }
     ],
@@ -62,25 +68,24 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   try {
     const { name, arguments: args } = request.params;
 
-    if (name === "search_memory") {
-      const response = await fetch(`${NEXT_JS_API_URL}/search`, {
+    if (name === "search_memory" || name === "add_memory") {
+      const endpoint = name === "search_memory" ? "/search" : "/add";
+      
+      const response = await fetch(`${NEXT_JS_API_URL}${endpoint}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${API_KEY}`
+        },
         body: JSON.stringify(args),
       });
+      
       const result = await response.json();
-      return {
-        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
-      };
-    }
-
-    if (name === "add_memory") {
-      const response = await fetch(`${NEXT_JS_API_URL}/add`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(args),
-      });
-      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || `HTTP error! status: ${response.status}`);
+      }
+      
       return {
         content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
       };

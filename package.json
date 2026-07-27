@@ -1,7 +1,9 @@
 {
-  "name": "app",
-  "version": "0.1.0",
-  "private": true,
+  "name": "memory-bank-mcp",
+  "version": "1.0.0",
+  "bin": {
+    "memory-bank-mcp": "./mcp-server.mjs"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",

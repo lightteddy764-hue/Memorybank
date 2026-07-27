@@ -7,6 +7,7 @@ create table projects (
   user_id uuid references auth.users(id),
   name text not null,
   description text,
+  api_key uuid default gen_random_uuid() not null unique,
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 

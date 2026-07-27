@@ -1,25 +1,39 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/utils/supabase/client';
+import { supabaseAdmin } from '@/utils/supabase/server';
 
 export async function POST(request: Request) {
   try {
-    const { projectId, query } = await request.json();
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Missing or invalid Authorization header' }, { status: 401 });
+    }
+    
+    const apiKey = authHeader.replace('Bearer ', '');
 
-    if (!projectId || !query) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    // Look up the project using the API Key
+    const { data: project, error: projectError } = await supabaseAdmin
+      .from('projects')
+      .select('id')
+      .eq('api_key', apiKey)
+      .single();
+
+    if (projectError || !project) {
+      return NextResponse.json({ error: 'Invalid API Key' }, { status: 401 });
     }
 
-    // TODO: In a production app with embeddings enabled, you would:
-    // 1. Generate an embedding for the `query` text.
-    // 2. Perform a similarity search in Supabase using `rpc('match_memories', { query_embedding: ... })`.
-    //
-    // For now, as a fallback until embeddings are configured, we will do a basic text search.
-    
-    const { data, error } = await supabase
+    const { query } = await request.json();
+
+    if (!query) {
+      return NextResponse.json({ error: 'query is required' }, { status: 400 });
+    }
+
+    // Since we are not doing vector embeddings in this prototype, 
+    // we'll just do a simple text search for demonstration.
+    const { data, error } = await supabaseAdmin
       .from('memories')
       .select('*')
-      .eq('project_id', projectId)
-      .textSearch('content', query);
+      .eq('project_id', project.id)
+      .ilike('content', `%${query}%`);
 
     if (error) {
       console.error('Supabase error:', error);

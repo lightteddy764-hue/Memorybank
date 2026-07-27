@@ -1,22 +1,37 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/utils/supabase/client';
+import { supabaseAdmin } from '@/utils/supabase/server';
 
 export async function POST(request: Request) {
   try {
-    const { projectId, content, type } = await request.json();
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Missing or invalid Authorization header' }, { status: 401 });
+    }
+    
+    const apiKey = authHeader.replace('Bearer ', '');
 
-    if (!projectId || !content || !type) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    // Look up the project using the API Key
+    const { data: project, error: projectError } = await supabaseAdmin
+      .from('projects')
+      .select('id')
+      .eq('api_key', apiKey)
+      .single();
+
+    if (projectError || !project) {
+      return NextResponse.json({ error: 'Invalid API Key' }, { status: 401 });
     }
 
-    // TODO: In a full production app, you would generate an embedding for `content` here
-    // using an API like OpenAI (text-embedding-3-small) or Google Gemini.
-    // For now, we will insert it without the embedding vector to get the base flow working.
-    
-    const { data, error } = await supabase
+    const { content, type } = await request.json();
+
+    if (!content || !type) {
+      return NextResponse.json({ error: 'content and type are required' }, { status: 400 });
+    }
+
+    // Insert the memory using the resolved project ID
+    const { data, error } = await supabaseAdmin
       .from('memories')
       .insert([
-        { project_id: projectId, content, type }
+        { project_id: project.id, content, type }
       ])
       .select()
       .single();
