@@ -1,22 +1,23 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import dynamic from 'next/dynamic';
-import { Maximize2, Minimize2, RefreshCw, Filter, Sparkles, Info, X, Tag } from 'lucide-react';
+import { Sparkles, Tag, Layers, RefreshCw, Maximize2, Minimize2, X, Info } from 'lucide-react';
 
-// Dynamically import ForceGraph2D with SSR disabled to prevent Node window errors in Next.js
-const ForceGraph2D = dynamic(() => import('react-force-graph-2d'), { 
+// Dynamically import react-force-graph-2d with SSR disabled
+const ForceGraph2D = dynamic(() => import('react-force-graph-2d'), {
   ssr: false,
   loading: () => (
-    <div className="w-full h-[550px] flex flex-col items-center justify-center bg-slate-950/70 rounded-xl border border-slate-800/80 gap-3">
-      <div className="w-8 h-8 rounded-full border-2 border-cyan-400 border-t-transparent animate-spin" />
-      <span className="text-xs font-mono text-cyan-400">Loading Force-Directed Physics Engine...</span>
+    <div style={{ width: '100%', height: '550px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(10, 10, 15, 0.7)', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.08)', gap: '12px' }}>
+      <div style={{ width: '32px', height: '32px', borderRadius: '50%', border: '3px solid #06b6d4', borderTopColor: 'transparent', animation: 'spin 1s linear infinite' }} />
+      <span style={{ fontSize: '0.8rem', fontFamily: 'monospace', color: '#06b6d4' }}>Loading Force-Directed Physics Engine...</span>
     </div>
   )
 });
 
 interface Memory {
   id: string;
+  project_id: string;
   content: string;
   type: string;
   entities?: string[];
@@ -41,226 +42,224 @@ interface GraphNode {
 interface GraphLink {
   source: string;
   target: string;
-  type: string;
+  label: string;
   color: string;
 }
 
-export default function AdvancedKnowledgeGraph({ memories, projectName }: { memories: Memory[]; projectName: string }) {
-  const containerRef = useRef<HTMLDivElement | null>(null);
+const CATEGORY_COLORS: Record<string, string> = {
+  architecture: '#10b981', // emerald
+  lessonsLearned: '#8b5cf6', // purple
+  activeContext: '#06b6d4', // cyan
+  general: '#f59e0b', // amber
+  entity: '#ec4899', // pink
+};
+
+export default function AdvancedKnowledgeGraph({
+  memories,
+  projectName = 'Project'
+}: {
+  memories: Memory[];
+  projectName?: string;
+}) {
   const fgRef = useRef<any>(null);
-  const [dimensions, setDimensions] = useState({ width: 700, height: 550 });
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [dimensions, setDimensions] = useState({ width: 800, height: 550 });
   const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
   const [hoveredNode, setHoveredNode] = useState<GraphNode | null>(null);
-  const [activeFilter, setActiveFilter] = useState<string>('all');
+  const [activeFilter, setActiveFilter] = useState<'all' | 'architecture' | 'lessonsLearned' | 'activeContext'>('all');
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  // Measure container dimensions for responsive canvas
+  // Resize listener
   useEffect(() => {
     const updateDimensions = () => {
       if (containerRef.current) {
+        const { clientWidth } = containerRef.current;
         setDimensions({
-          width: containerRef.current.clientWidth || 700,
-          height: isFullscreen ? window.innerHeight - 150 : 550
+          width: clientWidth || 800,
+          height: isFullscreen ? window.innerHeight - 180 : 550
         });
       }
     };
+
     updateDimensions();
     window.addEventListener('resize', updateDimensions);
     return () => window.removeEventListener('resize', updateDimensions);
   }, [isFullscreen]);
 
-  // Construct Graph Data (Nodes & Links)
+  // Construct Force Graph Data
   const graphData = useMemo(() => {
-    const nodes: GraphNode[] = [];
+    const nodesMap = new Map<string, GraphNode>();
     const links: GraphLink[] = [];
-    const nodeIds = new Set<string>();
 
-    const categories = [
-      { id: 'cat-activeContext', name: 'Active Context Hub', color: '#10b981', val: 20 },
-      { id: 'cat-lessonsLearned', name: 'Lessons Hub', color: '#8b5cf6', val: 20 },
-      { id: 'cat-architecture', name: 'Architecture Hub', color: '#06b6d4', val: 20 },
-      { id: 'cat-general', name: 'General Notes Hub', color: '#f59e0b', val: 18 },
-    ];
+    // Filter memories if tab is active
+    const filteredMemories = memories.filter(m => {
+      if (activeFilter === 'all') return true;
+      return m.type === activeFilter;
+    });
 
-    // Add category hubs
-    categories.forEach((cat) => {
-      nodes.push({
-        id: cat.id,
-        name: cat.name,
-        val: cat.val,
-        color: cat.color,
+    // 1. Create Category Hub Nodes
+    const categories = Array.from(new Set(filteredMemories.map(m => m.type || 'general')));
+    categories.forEach(cat => {
+      const catId = `cat:${cat}`;
+      nodesMap.set(catId, {
+        id: catId,
+        name: cat.toUpperCase(),
+        val: 16,
+        color: CATEGORY_COLORS[cat] || CATEGORY_COLORS.general,
         type: 'category'
       });
-      nodeIds.add(cat.id);
     });
 
-    const filteredMemories = activeFilter === 'all' 
-      ? memories 
-      : memories.filter(m => m.type === activeFilter);
-
-    const entitySet = new Set<string>();
-    filteredMemories.forEach(m => {
-      (m.entities || []).forEach(ent => entitySet.add(ent));
-    });
-
-    // Add entity nodes
-    entitySet.forEach(ent => {
-      const id = `ent-${ent}`;
-      nodes.push({
-        id,
-        name: `#${ent}`,
-        val: 12,
-        color: '#ec4899', // pink
-        type: 'entity'
-      });
-      nodeIds.add(id);
-    });
-
-    // Add memory nodes & links
-    const colorMap: Record<string, string> = {
-      activeContext: '#34d399',
-      lessonsLearned: '#a78bfa',
-      architecture: '#22d3ee',
-      general: '#fbbf24',
-    };
-
+    // 2. Create Memory Nodes and Entity Hubs
     filteredMemories.forEach(mem => {
-      nodes.push({
-        id: mem.id,
-        name: mem.content.slice(0, 30) + (mem.content.length > 30 ? '...' : ''),
-        val: 8,
-        color: colorMap[mem.type] || '#94a3b8',
+      const memId = `mem:${mem.id}`;
+      const catColor = CATEGORY_COLORS[mem.type] || CATEGORY_COLORS.general;
+
+      // Add Memory Node
+      nodesMap.set(memId, {
+        id: memId,
+        name: mem.content.length > 30 ? mem.content.slice(0, 28) + '...' : mem.content,
+        val: 6,
+        color: catColor,
         type: 'memory',
         category: mem.type,
         memory: mem
       });
-      nodeIds.add(mem.id);
 
-      // Link memory to category hub
-      if (nodeIds.has(`cat-${mem.type}`)) {
-        links.push({
-          source: mem.id,
-          target: `cat-${mem.type}`,
-          type: 'belongs_to',
-          color: 'rgba(255, 255, 255, 0.15)'
+      // Link Memory to its Category Hub
+      links.push({
+        source: memId,
+        target: `cat:${mem.type || 'general'}`,
+        label: 'category',
+        color: 'rgba(255, 255, 255, 0.15)'
+      });
+
+      // Add Entity Nodes & Links
+      if (mem.entities && Array.isArray(mem.entities)) {
+        mem.entities.forEach(ent => {
+          const entId = `ent:${ent.toLowerCase().trim()}`;
+          
+          if (!nodesMap.has(entId)) {
+            nodesMap.set(entId, {
+              id: entId,
+              name: `#${ent}`,
+              val: 8,
+              color: CATEGORY_COLORS.entity,
+              type: 'entity'
+            });
+          }
+
+          links.push({
+            source: memId,
+            target: entId,
+            label: 'has_entity',
+            color: 'rgba(236, 72, 153, 0.3)'
+          });
         });
       }
 
-      // Link memory to entities
-      (mem.entities || []).forEach(ent => {
-        if (nodeIds.has(`ent-${ent}`)) {
-          links.push({
-            source: mem.id,
-            target: `ent-${ent}`,
-            type: 'has_entity',
-            color: 'rgba(236, 72, 153, 0.3)'
-          });
-        }
-      });
-
-      // Link to related memories
-      (mem.related_memory_ids || []).forEach(relId => {
-        if (nodeIds.has(relId)) {
-          links.push({
-            source: mem.id,
-            target: relId,
-            type: 'related',
-            color: 'rgba(6, 182, 212, 0.5)'
-          });
-        }
-      });
+      // Add Explicit Memory-to-Memory Links
+      if (mem.related_memory_ids && Array.isArray(mem.related_memory_ids)) {
+        mem.related_memory_ids.forEach(relId => {
+          const targetMemId = `mem:${relId}`;
+          if (filteredMemories.some(m => m.id === relId)) {
+            links.push({
+              source: memId,
+              target: targetMemId,
+              label: 'related_to',
+              color: 'rgba(6, 182, 212, 0.4)'
+            });
+          }
+        });
+      }
     });
 
-    return { nodes, links };
+    return {
+      nodes: Array.from(nodesMap.values()),
+      links
+    };
   }, [memories, activeFilter]);
 
-  // Handle zoom to fit
+  // Recenter and zoom graph
   const handleZoomToFit = useCallback(() => {
     if (fgRef.current) {
       fgRef.current.zoomToFit(400, 50);
     }
   }, []);
 
-  // Custom Node Canvas Rendering (Supermemory/Obsidian Glowing Style)
+  // Custom Node Canvas Renderer
   const renderNode = useCallback((node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
-    const isSelected = selectedNode?.id === node.id;
-    const isHovered = hoveredNode?.id === node.id;
-
     const label = node.name;
-    const fontSize = node.type === 'category' ? 12 / globalScale : 10 / globalScale;
-    const radius = Math.sqrt(node.val) * 2;
-
-    // Draw glowing halo if hovered/selected or hub
-    if (isSelected || isHovered || node.type === 'category') {
-      ctx.save();
-      ctx.shadowColor = node.color;
-      ctx.shadowBlur = isSelected ? 25 : 15;
+    const fontSize = 12 / globalScale;
+    ctx.font = `${node.type === 'category' ? 'bold ' : ''}${Math.max(fontSize, 3)}px Inter, sans-serif`;
+    
+    // Draw outer glow for category hubs or selected nodes
+    if (node.type === 'category' || selectedNode?.id === node.id || hoveredNode?.id === node.id) {
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, Math.sqrt(node.val) * 2.5 + 4, 0, 2 * Math.PI, false);
+      ctx.fillStyle = node.color + '33'; // 20% opacity glow
+      ctx.fill();
     }
 
+    // Draw main circle
     ctx.beginPath();
-    ctx.arc(node.x, node.y, radius + (isSelected ? 3 : 0), 0, 2 * Math.PI, false);
+    ctx.arc(node.x, node.y, Math.sqrt(node.val) * 2, 0, 2 * Math.PI, false);
     ctx.fillStyle = node.color;
     ctx.fill();
-
-    ctx.strokeStyle = isSelected ? '#ffffff' : 'rgba(0, 0, 0, 0.5)';
-    ctx.lineWidth = isSelected ? 2 / globalScale : 1 / globalScale;
+    ctx.lineWidth = selectedNode?.id === node.id ? 2 / globalScale : 1 / globalScale;
+    ctx.strokeStyle = selectedNode?.id === node.id ? '#ffffff' : 'rgba(0,0,0,0.4)';
     ctx.stroke();
 
-    if (isSelected || isHovered || node.type === 'category') {
-      ctx.restore();
-    }
-
-    // Draw text label when zoomed in or when hovered/selected/hub
-    if (globalScale > 1.2 || isHovered || isSelected || node.type === 'category') {
-      ctx.font = `${node.type === 'category' ? '600' : '400'} ${fontSize}px Outfit, Inter, sans-serif`;
+    // Render Text Labels when zoomed in or on hover/category
+    if (globalScale > 1.2 || node.type === 'category' || node.type === 'entity' || hoveredNode?.id === node.id || selectedNode?.id === node.id) {
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillStyle = isHovered || isSelected ? '#ffffff' : 'rgba(255, 255, 255, 0.85)';
-      ctx.fillText(label, node.x, node.y + radius + (8 / globalScale));
+      ctx.fillStyle = node.type === 'category' ? '#ffffff' : 'rgba(244, 244, 245, 0.9)';
+      ctx.fillText(label, node.x, node.y + Math.sqrt(node.val) * 2 + (fontSize + 2));
     }
   }, [selectedNode, hoveredNode]);
 
   return (
-    <div className={`flex flex-col gap-4 p-6 rounded-2xl bg-slate-900/90 border border-slate-800/80 backdrop-blur-xl shadow-2xl transition-all duration-300 ${isFullscreen ? 'fixed inset-4 z-50 overflow-hidden' : 'relative w-full'}`}>
+    <div className="glass-panel" style={isFullscreen ? { position: 'fixed', top: '20px', left: '20px', right: '20px', bottom: '20px', zIndex: 999, overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '16px' } : { display: 'flex', flexDirection: 'column', gap: '16px', position: 'relative' }}>
       
       {/* Header & Controls */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-800/80 pb-4">
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '16px', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '16px' }}>
         <div>
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-cyan-400 animate-pulse" />
-            <h3 className="text-lg font-bold bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-500 bg-clip-text text-transparent">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Sparkles style={{ width: '18px', height: '18px', color: '#06b6d4' }} />
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#fff', margin: 0 }}>
               {projectName} Knowledge Graph
             </h3>
           </div>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <p style={{ fontSize: '0.8rem', color: '#a1a1aa', margin: '4px 0 0 0' }}>
             Advanced force-directed graph (react-force-graph-2d). Drag nodes, scroll to zoom, click to inspect.
           </p>
         </div>
 
         {/* Filter & Action Bar */}
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center bg-slate-950/80 rounded-lg p-1 border border-slate-800 text-xs">
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px' }}>
+          <div className="filter-bar">
             <button
               onClick={() => setActiveFilter('all')}
-              className={`px-2.5 py-1 rounded-md font-medium transition-all ${activeFilter === 'all' ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:text-white'}`}
+              className={`filter-tab ${activeFilter === 'all' ? 'filter-tab-active' : ''}`}
             >
               All Nodes
             </button>
             <button
               onClick={() => setActiveFilter('architecture')}
-              className={`px-2.5 py-1 rounded-md font-medium transition-all ${activeFilter === 'architecture' ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/30' : 'text-slate-400 hover:text-white'}`}
+              className={`filter-tab ${activeFilter === 'architecture' ? 'filter-tab-active' : ''}`}
             >
               Architecture
             </button>
             <button
               onClick={() => setActiveFilter('lessonsLearned')}
-              className={`px-2.5 py-1 rounded-md font-medium transition-all ${activeFilter === 'lessonsLearned' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' : 'text-slate-400 hover:text-white'}`}
+              className={`filter-tab ${activeFilter === 'lessonsLearned' ? 'filter-tab-active' : ''}`}
             >
               Lessons
             </button>
             <button
               onClick={() => setActiveFilter('activeContext')}
-              className={`px-2.5 py-1 rounded-md font-medium transition-all ${activeFilter === 'activeContext' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'text-slate-400 hover:text-white'}`}
+              className={`filter-tab ${activeFilter === 'activeContext' ? 'filter-tab-active' : ''}`}
             >
               Context
             </button>
@@ -269,22 +268,24 @@ export default function AdvancedKnowledgeGraph({ memories, projectName }: { memo
           <button
             onClick={handleZoomToFit}
             title="Recenter & Fit Graph"
-            className="p-2 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/80 transition-colors"
+            className="btn-secondary"
+            style={{ padding: '8px 10px' }}
           >
-            <RefreshCw className="w-4 h-4" />
+            <RefreshCw style={{ width: '16px', height: '16px' }} />
           </button>
           <button
             onClick={() => setIsFullscreen(!isFullscreen)}
             title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen Canvas'}
-            className="p-2 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700/80 transition-colors"
+            className="btn-secondary"
+            style={{ padding: '8px 10px' }}
           >
-            {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+            {isFullscreen ? <Minimize2 style={{ width: '16px', height: '16px' }} /> : <Maximize2 style={{ width: '16px', height: '16px' }} />}
           </button>
         </div>
       </div>
 
       {/* Main Canvas Container */}
-      <div ref={containerRef} className="relative w-full rounded-xl overflow-hidden bg-slate-950/80 border border-slate-800/60 shadow-inner">
+      <div ref={containerRef} style={{ position: 'relative', width: '100%', borderRadius: '12px', overflow: 'hidden', background: 'rgba(10, 10, 16, 0.85)', border: '1px solid rgba(255,255,255,0.08)', boxShadow: 'inset 0 2px 20px rgba(0,0,0,0.5)' }}>
         <ForceGraph2D
           ref={fgRef}
           width={dimensions.width}
@@ -315,25 +316,25 @@ export default function AdvancedKnowledgeGraph({ memories, projectName }: { memo
         />
 
         {/* Legend / Stats overlay */}
-        <div className="absolute top-4 left-4 flex items-center gap-3 px-3 py-1.5 rounded-full bg-slate-900/90 border border-slate-800/80 text-[11px] font-mono text-slate-400 backdrop-blur-md pointer-events-none">
-          <span>Nodes: <strong className="text-cyan-400">{graphData.nodes.length}</strong></span>
+        <div style={{ position: 'absolute', top: '16px', left: '16px', display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 14px', borderRadius: '20px', background: 'rgba(15, 15, 23, 0.9)', border: '1px solid rgba(255,255,255,0.1)', fontSize: '0.75rem', fontFamily: 'monospace', color: '#a1a1aa', pointerEvents: 'none' }}>
+          <span>Nodes: <strong style={{ color: '#06b6d4' }}>{graphData.nodes.length}</strong></span>
           <span>•</span>
-          <span>Edges: <strong className="text-purple-400">{graphData.links.length}</strong></span>
+          <span>Edges: <strong style={{ color: '#8b5cf6' }}>{graphData.links.length}</strong></span>
         </div>
 
         {/* Hover Tooltip */}
         {hoveredNode && !selectedNode && (
-          <div className="absolute bottom-4 right-4 max-w-sm p-3.5 rounded-xl bg-slate-900/95 border border-slate-700/80 shadow-2xl backdrop-blur-md pointer-events-none animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: hoveredNode.color }} />
-              <span className="text-[10px] font-mono uppercase tracking-wider text-slate-300">
+          <div style={{ position: 'absolute', bottom: '16px', right: '16px', maxWidth: '320px', padding: '14px', borderRadius: '12px', background: 'rgba(15, 15, 25, 0.95)', border: '1px solid rgba(255,255,255,0.15)', boxShadow: '0 8px 30px rgba(0,0,0,0.5)', pointerEvents: 'none', zIndex: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: hoveredNode.color }} />
+              <span style={{ fontSize: '0.7rem', fontFamily: 'monospace', textTransform: 'uppercase', color: '#e4e4e7' }}>
                 {hoveredNode.type.toUpperCase()}
               </span>
             </div>
-            <p className="text-sm font-semibold text-white mt-1">{hoveredNode.name}</p>
+            <p style={{ fontSize: '0.9rem', fontWeight: 600, color: '#fff', margin: 0 }}>{hoveredNode.name}</p>
             {hoveredNode.memory && (
-              <p className="text-xs text-slate-300 mt-1 line-clamp-3 leading-relaxed">
-                {hoveredNode.memory.content}
+              <p style={{ fontSize: '0.8rem', color: '#a1a1aa', marginTop: '6px', marginBottom: 0, lineHeight: 1.5 }}>
+                {hoveredNode.memory.content.length > 120 ? hoveredNode.memory.content.slice(0, 120) + '...' : hoveredNode.memory.content}
               </p>
             )}
           </div>
@@ -342,40 +343,40 @@ export default function AdvancedKnowledgeGraph({ memories, projectName }: { memo
 
       {/* Node Inspector Drawer */}
       {selectedNode && (
-        <div className="p-5 rounded-xl bg-gradient-to-r from-slate-900 via-slate-900/95 to-indigo-950/50 border border-cyan-500/30 shadow-2xl flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-3 duration-300">
-          <div className="flex justify-between items-center border-b border-slate-800/80 pb-2.5">
-            <div className="flex items-center gap-2.5">
-              <span className="w-3.5 h-3.5 rounded-full shadow-lg" style={{ backgroundColor: selectedNode.color }} />
+        <div style={{ padding: '20px', borderRadius: '14px', background: 'linear-gradient(135deg, rgba(20, 20, 32, 0.95) 0%, rgba(30, 30, 50, 0.95) 100%)', border: '1px solid rgba(6, 182, 212, 0.4)', boxShadow: '0 12px 40px rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column', gap: '14px', position: 'relative' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: selectedNode.color, boxShadow: `0 0 10px ${selectedNode.color}` }} />
               <div>
-                <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 block">
+                <span style={{ fontSize: '0.75rem', fontFamily: 'monospace', textTransform: 'uppercase', color: '#a1a1aa', display: 'block' }}>
                   {selectedNode.type === 'category' ? 'Category Hub Node' : selectedNode.type === 'entity' ? 'Entity Tag Node' : `Memory Node • ${selectedNode.category}`}
                 </span>
-                <h4 className="text-sm font-bold text-white">{selectedNode.name}</h4>
+                <h4 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#fff', margin: '2px 0 0 0' }}>{selectedNode.name}</h4>
               </div>
             </div>
             <button
               onClick={() => setSelectedNode(null)}
-              className="p-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
+              style={{ background: 'rgba(255,255,255,0.08)', border: 'none', color: '#a1a1aa', cursor: 'pointer', padding: '6px', borderRadius: '8px', display: 'flex', alignItems: 'center' }}
             >
-              <X className="w-4 h-4" />
+              <X style={{ width: '16px', height: '16px' }} />
             </button>
           </div>
 
           {selectedNode.memory ? (
-            <div className="flex flex-col gap-3">
-              <div className="bg-slate-950/70 p-3.5 rounded-lg border border-slate-800/80 text-sm font-medium text-slate-200 leading-relaxed">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ background: 'rgba(0, 0, 0, 0.5)', padding: '16px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.08)', fontSize: '0.95rem', color: '#e4e4e7', lineHeight: 1.6 }}>
                 "{selectedNode.memory.content}"
               </div>
-              <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '10px', fontSize: '0.8rem', color: '#a1a1aa' }}>
                 <span>Saved on: {new Date(selectedNode.memory.created_at).toLocaleString()}</span>
                 {selectedNode.memory.entities && selectedNode.memory.entities.length > 0 && (
-                  <div className="flex items-center gap-1.5">
-                    <Tag className="w-3.5 h-3.5 text-pink-400" />
-                    <div className="flex flex-wrap gap-1">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Tag style={{ width: '14px', height: '14px', color: '#ec4899' }} />
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
                       {selectedNode.memory.entities.map((ent, idx) => (
                         <span
                           key={idx}
-                          className="px-2 py-0.5 rounded bg-pink-500/10 text-pink-400 border border-pink-500/20 font-mono text-[11px]"
+                          style={{ padding: '2px 8px', borderRadius: '6px', background: 'rgba(236, 72, 153, 0.15)', color: '#f472b6', border: '1px solid rgba(236, 72, 153, 0.3)', fontFamily: 'monospace', fontSize: '0.75rem' }}
                         >
                           #{ent}
                         </span>
@@ -386,7 +387,7 @@ export default function AdvancedKnowledgeGraph({ memories, projectName }: { memo
               </div>
             </div>
           ) : (
-            <p className="text-xs text-slate-400 italic">
+            <p style={{ fontSize: '0.85rem', color: '#a1a1aa', fontStyle: 'italic', margin: 0 }}>
               This is a hub node representing an entity tag or memory category. Connected memories orbit around this node in the force graph.
             </p>
           )}

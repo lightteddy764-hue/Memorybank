@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import AdvancedKnowledgeGraph from './AdvancedKnowledgeGraph';
-import { Copy, Check, Key, Tag, Clock, Database, Layers } from 'lucide-react';
+import { Database, Key, Copy, Check, Clock, Tag, Share2, Sparkles, Activity, Layers, Zap } from 'lucide-react';
 
 interface Project {
   id: string;
@@ -30,176 +30,168 @@ export default function ProjectDashboard({
   allMemories: Memory[];
 }) {
   const [copied, setCopied] = useState(false);
-  const [feedFilter, setFeedFilter] = useState<string>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'architecture' | 'lessonsLearned' | 'activeContext' | 'general'>('all');
 
-  // Filter memories strictly to this project
+  // Filter memories to only this project
   const projectMemories = allMemories.filter(m => m.project_id === project.id);
 
-  const filteredFeed = feedFilter === 'all'
-    ? projectMemories
-    : projectMemories.filter(m => m.type === feedFilter);
+  const filteredMemories = projectMemories.filter(m => {
+    if (activeTab === 'all') return true;
+    return m.type === activeTab;
+  });
 
-  const copyApiKey = () => {
+  const handleCopy = () => {
     navigator.clipboard.writeText(project.api_key);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const badgeColors: Record<string, string> = {
-    activeContext: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-    lessonsLearned: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
-    architecture: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
-    general: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-  };
-
-  const borderColors: Record<string, string> = {
-    activeContext: 'border-l-emerald-500',
-    lessonsLearned: 'border-l-purple-500',
-    architecture: 'border-l-cyan-500',
-    general: 'border-l-amber-500',
+  const getTypeColor = (type: string) => {
+    switch (type) {
+      case 'architecture': return '#10b981'; // emerald
+      case 'lessonsLearned': return '#8b5cf6'; // purple
+      case 'activeContext': return '#06b6d4'; // cyan
+      default: return '#f59e0b'; // amber
+    }
   };
 
   return (
-    <div className="flex flex-col gap-8 w-full">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
       
-      {/* Project Header Banner & API Key */}
-      <div className="p-6 rounded-2xl bg-gradient-to-br from-slate-900/95 via-slate-900/80 to-indigo-950/40 border border-slate-800/80 shadow-2xl backdrop-blur-xl flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
-        <div className="max-w-2xl">
-          <div className="flex items-center gap-3">
-            <h2 className="text-2xl font-bold text-white tracking-tight">{project.name}</h2>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-cyan-500/15 text-cyan-400 border border-cyan-500/30">
-              Active Workspace
-            </span>
+      {/* Project Header Card */}
+      <div className="glass-panel" style={{ background: 'linear-gradient(135deg, rgba(25, 25, 38, 0.8) 0%, rgba(13, 13, 20, 0.9) 100%)', border: '1px solid rgba(99, 102, 241, 0.25)', position: 'relative', overflow: 'hidden' }}>
+        <div style={{ position: 'absolute', top: 0, right: 0, width: '300px', height: '300px', background: 'radial-gradient(circle, rgba(99, 102, 241, 0.12) 0%, rgba(0,0,0,0) 70%)', pointerEvents: 'none' }} />
+        
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'space-between', gap: '20px', position: 'relative', zIndex: 1 }}>
+          <div style={{ flex: 1, minWidth: '280px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+              <span className="badge badge-purple" style={{ background: 'rgba(99, 102, 241, 0.15)', color: '#a5b4fc', border: '1px solid rgba(99, 102, 241, 0.3)' }}>
+                <Database style={{ width: '12px', height: '12px' }} />
+                Active Project Bank
+              </span>
+              <span style={{ fontSize: '0.8rem', color: '#71717a' }}>• ID: {project.id.slice(0, 8)}...</span>
+            </div>
+            <h1 style={{ fontSize: '2rem', fontWeight: 800, color: '#fff', marginBottom: '8px' }}>{project.name}</h1>
+            <p style={{ color: '#a1a1aa', fontSize: '0.95rem', margin: 0, lineHeight: 1.6, maxWidth: '650px' }}>
+              {project.description || 'No project description provided. This workspace stores structured graph memories and active rules.'}
+            </p>
           </div>
-          <p className="text-sm text-slate-300 mt-1.5 leading-relaxed">
-            {project.description || 'No project description provided. Start saving memories to build your AI knowledge graph.'}
-          </p>
-          <div className="flex items-center gap-4 mt-3 text-xs text-slate-400">
-            <span className="flex items-center gap-1.5">
-              <Database className="w-3.5 h-3.5 text-cyan-400" />
-              Memories stored: <strong className="text-white">{projectMemories.length}</strong>
-            </span>
-            <span>•</span>
-            <span className="flex items-center gap-1.5">
-              <Clock className="w-3.5 h-3.5 text-purple-400" />
-              Created: {new Date(project.created_at).toLocaleDateString()}
-            </span>
-          </div>
-        </div>
 
-        {/* API Key Copy Box */}
-        <div className="w-full lg:w-auto flex flex-col gap-2 bg-slate-950/90 p-4 rounded-xl border border-slate-800/90 min-w-[320px] shadow-lg">
-          <div className="flex items-center justify-between text-xs font-semibold text-slate-400">
-            <span className="flex items-center gap-1.5">
-              <Key className="w-3.5 h-3.5 text-emerald-400" />
-              Project API Key (.env.local)
-            </span>
-            <span className="text-[10px] text-slate-400">MEMORY_BANK_API_KEY</span>
-          </div>
-          
-          <div className="flex items-center gap-2 mt-1">
-            <code className="flex-1 bg-slate-900 px-3 py-2 rounded-lg text-xs font-mono text-emerald-400 border border-slate-800/80 truncate">
-              {project.api_key}
-            </code>
-            <button
-              onClick={copyApiKey}
-              className="p-2 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 transition-all active:scale-95 flex items-center justify-center shrink-0"
-              title="Copy API Key"
-            >
-              {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-            </button>
+          {/* API Key Box */}
+          <div style={{ background: 'rgba(0, 0, 0, 0.6)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '14px', padding: '16px', minWidth: '310px', boxShadow: '0 4px 20px rgba(0,0,0,0.3)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', fontWeight: 600, color: '#a1a1aa', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+              <Key style={{ width: '14px', height: '14px', color: '#06b6d4' }} />
+              <span>Project API Key (.env.local)</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '8px', padding: '6px 10px' }}>
+              <code style={{ fontSize: '0.8rem', fontFamily: 'monospace', color: '#34d399', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {project.api_key}
+              </code>
+              <button
+                onClick={handleCopy}
+                style={{ background: 'transparent', border: 'none', color: copied ? '#10b981' : '#a1a1aa', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center' }}
+                title="Copy API Key"
+              >
+                {copied ? <Check style={{ width: '16px', height: '16px' }} /> : <Copy style={{ width: '16px', height: '16px' }} />}
+              </button>
+            </div>
+            <p style={{ fontSize: '0.75rem', color: '#71717a', margin: '8px 0 0 0' }}>
+              Use this key with your local <code style={{ color: '#a5f3fc' }}>mcp-server.mjs</code> to scope memories to this project!
+            </p>
           </div>
         </div>
       </div>
 
-      {/* Advanced Knowledge Graph Engine */}
-      <section>
-        <AdvancedKnowledgeGraph memories={projectMemories} projectName={project.name} />
-      </section>
+      {/* Advanced Knowledge Graph Section */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 4px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#06b6d4', boxShadow: '0 0 10px #06b6d4' }} />
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#fff', margin: 0 }}>Interactive Knowledge Graph</h3>
+          </div>
+          <span style={{ fontSize: '0.8rem', color: '#71717a' }}>Cognee & Supermemory Force Engine • Scroll to Zoom</span>
+        </div>
+        
+        <AdvancedKnowledgeGraph memories={projectMemories} />
+      </div>
 
-      {/* Project Activity Feed */}
-      <section className="p-6 rounded-2xl bg-slate-900/90 border border-slate-800/80 shadow-2xl backdrop-blur-xl flex flex-col gap-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800/80 pb-4">
+      {/* Activity Feed Section */}
+      <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '16px', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '16px' }}>
           <div>
-            <div className="flex items-center gap-2">
-              <Layers className="w-5 h-5 text-purple-400" />
-              <h3 className="text-lg font-bold text-white">Project Activity Feed</h3>
-            </div>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Live memories and extracted entity tags saved by your AI assistant for this project.
-            </p>
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: '#fff', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Activity style={{ width: '18px', height: '18px', color: '#8b5cf6' }} />
+              Project Memory Stream ({projectMemories.length})
+            </h3>
+            <p style={{ fontSize: '0.85rem', color: '#71717a', margin: '4px 0 0 0' }}>Live real-time activity feed of memories saved to this project</p>
           </div>
 
-          {/* Feed Filter Buttons */}
-          <div className="flex items-center bg-slate-950/80 rounded-lg p-1 border border-slate-800 text-xs self-start sm:self-auto">
-            {['all', 'architecture', 'lessonsLearned', 'activeContext', 'general'].map((tab) => (
+          {/* Filter Tabs */}
+          <div className="filter-bar">
+            {(['all', 'architecture', 'lessonsLearned', 'activeContext', 'general'] as const).map(tab => (
               <button
                 key={tab}
-                onClick={() => setFeedFilter(tab)}
-                className={`px-2.5 py-1 rounded-md font-medium transition-all ${
-                  feedFilter === tab
-                    ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30 shadow-sm'
-                    : 'text-slate-400 hover:text-white'
-                }`}
+                onClick={() => setActiveTab(tab)}
+                className={`filter-tab ${activeTab === tab ? 'filter-tab-active' : ''}`}
+                style={{ textTransform: 'capitalize' }}
               >
-                {tab === 'all' ? 'All' : tab === 'lessonsLearned' ? 'Lessons' : tab === 'activeContext' ? 'Context' : tab.charAt(0).toUpperCase() + tab.slice(1)}
+                {tab === 'all' ? 'All Stream' : tab}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Memory Cards Grid */}
-        {filteredFeed.length === 0 ? (
-          <div className="p-12 rounded-xl bg-slate-950/50 border border-dashed border-slate-800 text-center flex flex-col items-center justify-center gap-2">
-            <Database className="w-8 h-8 text-slate-600 mb-1 animate-bounce" />
-            <p className="text-sm font-medium text-slate-400">No memories found for this project filter.</p>
-            <p className="text-xs text-slate-400">Connect your AI using the API Key above and start coding!</p>
+        {/* Memories Grid */}
+        {filteredMemories.length === 0 ? (
+          <div style={{ padding: '40px 20px', textAlign: 'center', background: 'rgba(0,0,0,0.3)', borderRadius: '12px', border: '1px dashed rgba(255,255,255,0.08)' }}>
+            <Layers style={{ width: '32px', height: '32px', color: '#52525b', margin: '0 auto 12px auto' }} />
+            <p style={{ color: '#a1a1aa', fontSize: '0.95rem', margin: 0 }}>No memories found for this filter in {project.name}.</p>
+            <p style={{ color: '#71717a', fontSize: '0.8rem', marginTop: '4px', marginBottom: 0 }}>Connect your IDE via MCP and ask your AI to store architectural decisions!</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[600px] overflow-y-auto pr-1">
-            {filteredFeed.map((mem) => (
-              <div
-                key={mem.id}
-                className={`p-4 rounded-xl bg-slate-950/80 border border-slate-800/80 hover:border-slate-700/80 transition-all duration-200 flex flex-col justify-between gap-3 border-l-4 ${
-                  borderColors[mem.type] || 'border-l-slate-600'
-                } shadow-md hover:shadow-lg`}
-              >
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <span
-                      className={`px-2 py-0.5 rounded text-[11px] font-mono font-semibold uppercase tracking-wider border ${
-                        badgeColors[mem.type] || 'bg-slate-800 text-slate-300'
-                      }`}
-                    >
-                      {mem.type}
-                    </span>
-                    <span className="text-[11px] text-slate-400 font-mono">
-                      {new Date(mem.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
+            {filteredMemories.map(m => {
+              const borderLeftColor = getTypeColor(m.type);
+              return (
+                <div
+                  key={m.id}
+                  className="glass-card"
+                  style={{ borderLeft: `4px solid ${borderLeftColor}`, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '14px', background: 'rgba(24, 24, 32, 0.6)' }}
+                >
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginBottom: '10px' }}>
+                      <span className="badge" style={{ background: `${borderLeftColor}20`, color: borderLeftColor, border: `1px solid ${borderLeftColor}40` }}>
+                        <Tag style={{ width: '10px', height: '10px' }} />
+                        {m.type}
+                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: '#71717a' }}>
+                        <Clock style={{ width: '12px', height: '12px' }} />
+                        <span>{new Date(m.created_at).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+                    
+                    <p style={{ color: '#e4e4e7', fontSize: '0.9rem', lineHeight: 1.6, margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                      {m.content}
+                    </p>
                   </div>
-                  <p className="text-sm text-slate-200 leading-relaxed font-normal">{mem.content}</p>
-                </div>
 
-                {mem.entities && mem.entities.length > 0 && (
-                  <div className="flex items-center gap-1.5 pt-2 border-t border-slate-900/80">
-                    <Tag className="w-3.5 h-3.5 text-pink-400 shrink-0" />
-                    <div className="flex flex-wrap gap-1">
-                      {mem.entities.map((ent, idx) => (
-                        <span
-                          key={idx}
-                          className="px-2 py-0.5 rounded bg-pink-500/10 text-pink-400 border border-pink-500/20 font-mono text-[10px]"
-                        >
+                  {m.entities && m.entities.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                      {m.entities.map(ent => (
+                        <span key={ent} style={{ fontSize: '0.75rem', background: 'rgba(255,255,255,0.05)', color: '#a1a1aa', padding: '2px 8px', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.08)' }}>
                           #{ent}
                         </span>
                       ))}
                     </div>
-                  </div>
-                )}
-              </div>
-            ))}
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
-      </section>
+      </div>
+
     </div>
   );
 }

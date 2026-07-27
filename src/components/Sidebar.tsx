@@ -29,81 +29,76 @@ export default function Sidebar({
   const getProjectIcon = (index: number) => {
     const icons = [Database, Cpu, Folder];
     const IconComponent = icons[index % icons.length];
-    return <IconComponent className="w-4 h-4" />;
+    return <IconComponent style={{ width: '18px', height: '18px' }} />;
   };
 
   return (
-    <aside className="w-full lg:w-72 bg-slate-950/90 border-r border-slate-800/80 p-5 flex flex-col justify-between min-h-[calc(100vh-2rem)] rounded-2xl lg:rounded-r-none border border-slate-800/60 shadow-2xl backdrop-blur-xl">
-      <div className="flex flex-col gap-6">
+    <aside className="sidebar">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
         
         {/* Logo & IP Header */}
-        <div className="flex flex-col gap-2 border-b border-slate-800/80 pb-4">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
-              <Sparkles className="w-4 h-4 text-white animate-pulse" />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg, #06b6d4 0%, #6366f1 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 16px rgba(6, 182, 212, 0.3)' }}>
+              <Sparkles style={{ width: '18px', height: '18px', color: '#fff' }} />
             </div>
-            <h1 className="text-lg font-bold text-white tracking-tight">Memory Bank</h1>
+            <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#fff', letterSpacing: '-0.02em' }}>Memory Bank</span>
           </div>
           
-          <div className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-slate-900/80 border border-slate-800/80 text-xs">
-            <div className="flex items-center gap-1.5 text-slate-400">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', borderRadius: '10px', background: 'rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.08)', fontSize: '0.8rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#a1a1aa' }}>
+              <ShieldCheck style={{ width: '14px', height: '14px', color: '#10b981' }} />
               <span>IP Auth:</span>
             </div>
-            <span className="font-mono text-emerald-400 font-semibold">{userIp}</span>
+            <span style={{ fontFamily: 'monospace', color: '#10b981', fontWeight: 600 }}>{userIp}</span>
           </div>
         </div>
 
         {/* Create Project Button */}
         <button
           onClick={onOpenCreateModal}
-          className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-cyan-500 via-indigo-500 to-purple-600 hover:from-cyan-400 hover:to-purple-500 text-white font-semibold text-sm shadow-lg shadow-indigo-500/25 transition-all duration-200 flex items-center justify-center gap-2 group active:scale-95"
+          className="btn-primary"
+          style={{ width: '100%', padding: '12px 16px', fontSize: '0.9rem', justifyContent: 'center' }}
         >
-          <Plus className="w-4 h-4 transition-transform group-hover:rotate-90" />
+          <Plus style={{ width: '18px', height: '18px' }} />
           <span>New Memory Bank</span>
         </button>
 
         {/* Projects List */}
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-slate-400 px-1">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#71717a', padding: '0 4px' }}>
             <span>Your Projects ({projects.length})</span>
           </div>
 
           {projects.length === 0 ? (
-            <div className="p-4 rounded-xl bg-slate-900/50 border border-dashed border-slate-800 text-center">
-              <p className="text-xs text-slate-400">No projects found for this IP.</p>
-              <p className="text-[11px] text-slate-400 mt-1">Click above to create your first bank!</p>
+            <div style={{ padding: '20px', borderRadius: '12px', background: 'rgba(255,255,255,0.02)', border: '1px dashed rgba(255,255,255,0.1)', textAlign: 'center' }}>
+              <p style={{ fontSize: '0.85rem', color: '#a1a1aa', margin: 0 }}>No projects for this IP.</p>
+              <p style={{ fontSize: '0.75rem', color: '#71717a', marginTop: '4px', marginBottom: 0 }}>Click above to create your first bank!</p>
             </div>
           ) : (
-            <div className="flex flex-col gap-1.5 max-h-[50vh] overflow-y-auto pr-1">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '50vh', overflowY: 'auto', paddingRight: '4px' }}>
               {projects.map((proj, idx) => {
                 const isSelected = selectedProjectId === proj.id;
                 return (
                   <button
                     key={proj.id}
                     onClick={() => onSelectProject(proj.id)}
-                    className={`w-full text-left p-3 rounded-xl transition-all duration-200 flex items-start justify-between gap-3 group border ${
-                      isSelected
-                        ? 'bg-gradient-to-r from-cyan-500/15 to-indigo-500/10 border-cyan-500/40 text-white shadow-md'
-                        : 'bg-slate-900/40 hover:bg-slate-900/80 border-slate-800/60 hover:border-slate-700/80 text-slate-300'
-                    }`}
+                    className={`sidebar-item ${isSelected ? 'sidebar-item-active' : ''}`}
                   >
-                    <div className="flex items-start gap-3 min-w-0">
-                      <div className={`p-2 rounded-lg mt-0.5 transition-colors ${
-                        isSelected ? 'bg-cyan-500/20 text-cyan-400' : 'bg-slate-800/60 text-slate-400 group-hover:text-slate-200'
-                      }`}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', minWidth: 0 }}>
+                      <div style={{ padding: '8px', borderRadius: '8px', background: isSelected ? 'rgba(6, 182, 212, 0.2)' : 'rgba(255,255,255,0.05)', color: isSelected ? '#22d3ee' : '#a1a1aa', marginTop: '2px', display: 'flex' }}>
                         {getProjectIcon(idx)}
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <h4 className="text-sm font-semibold truncate leading-snug">{proj.name}</h4>
-                        <p className="text-[11px] text-slate-400 truncate mt-0.5">
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <h4 style={{ fontSize: '0.9rem', fontWeight: 600, color: isSelected ? '#fff' : '#e4e4e7', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{proj.name}</h4>
+                        <p style={{ fontSize: '0.75rem', color: isSelected ? '#a5f3fc' : '#71717a', margin: 0, marginTop: '2px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {proj.description || 'No description'}
                         </p>
                       </div>
                     </div>
 
                     {isSelected && (
-                      <span className="w-2 h-2 rounded-full bg-cyan-400 mt-2 shadow-sm shadow-cyan-400 shrink-0" />
+                      <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#06b6d4', boxShadow: '0 0 10px #06b6d4', flexShrink: 0 }} />
                     )}
                   </button>
                 );
@@ -114,12 +109,12 @@ export default function Sidebar({
       </div>
 
       {/* Footer Status */}
-      <div className="pt-4 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
-        <div className="flex items-center gap-1.5">
-          <Activity className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
+      <div style={{ paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.8rem', color: '#a1a1aa' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <Activity style={{ width: '14px', height: '14px', color: '#06b6d4' }} />
           <span>Engine Status:</span>
         </div>
-        <span className="text-cyan-400 font-mono font-medium">Superhouse 2.0</span>
+        <span style={{ color: '#06b6d4', fontFamily: 'monospace', fontWeight: 600 }}>Superhouse 2.0</span>
       </div>
     </aside>
   );
