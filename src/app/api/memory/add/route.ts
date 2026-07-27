@@ -55,7 +55,7 @@ export async function POST(request: Request) {
       : [];
 
     // Insert the memory using the resolved project ID and graph attributes
-    const { data, error } = await supabaseAdmin
+    let { data, error } = await supabaseAdmin
       .from('memories')
       .insert([
         { 
@@ -68,6 +68,24 @@ export async function POST(request: Request) {
       ])
       .select()
       .single();
+
+    // Fallback if entities or related_memory_ids column has not been added to Supabase schema yet
+    if (error && (error.code === 'PGRST204' || error.message?.includes('schema cache') || error.message?.includes('column'))) {
+      console.warn('Graph columns missing in Supabase. Falling back to basic memory insert. Please run supabase/alter_schema.sql in your Supabase SQL editor.');
+      const fallbackRes = await supabaseAdmin
+        .from('memories')
+        .insert([
+          { 
+            project_id: project.id, 
+            content, 
+            type
+          }
+        ])
+        .select()
+        .single();
+      data = fallbackRes.data;
+      error = fallbackRes.error;
+    }
 
     if (error) {
       console.error('Supabase error:', error);
