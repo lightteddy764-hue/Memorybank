@@ -1,40 +1,30 @@
-import { createClient } from '@/utils/supabase/server';
-import AuthForm from '@/components/AuthForm';
+import { supabaseAdmin } from '@/utils/supabase/server';
+import { getUserIp } from '@/app/actions';
 import CreateProjectForm from '@/components/CreateProjectForm';
-import SignoutButton from '@/components/SignoutButton';
 
 // Opt out of static rendering so we always see the latest projects
 export const dynamic = 'force-dynamic';
 
 export default async function Home() {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    return (
-      <main className="container">
-        <header className="mb-8" style={{ textAlign: 'center', paddingTop: '4rem' }}>
-          <h1>Memory Bank</h1>
-          <p style={{ maxWidth: '600px', margin: '0 auto 2rem', color: '#a1a1aa' }}>
-            The persistent memory layer for AI agents. Sign in or create an account to start managing your projects' architectural decisions and lessons learned.
-          </p>
-        </header>
-        <AuthForm />
-      </main>
-    );
-  }
-
-  // Fetch only the projects that belong to the logged-in user (enforced by RLS)
-  const { data: projects } = await supabase.from('projects').select('*').order('created_at', { ascending: false });
+  const userIp = await getUserIp();
+  
+  // Fetch only the projects created under the current visitor's IP address
+  const { data: projects } = await supabaseAdmin
+    .from('projects')
+    .select('*')
+    .eq('user_ip', userIp)
+    .order('created_at', { ascending: false });
 
   return (
     <main className="container">
       <header className="mb-8" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '2rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '1rem' }}>
         <div>
           <h1 style={{ fontSize: '1.8rem', margin: 0 }}>Memory Bank</h1>
-          <p style={{ margin: 0, fontSize: '0.9rem', color: '#a1a1aa' }}>Logged in as <span style={{ color: '#10b981' }}>{user.email}</span></p>
+          <p style={{ margin: 0, fontSize: '0.9rem', color: '#a1a1aa' }}>Frictionless access via IP: <span style={{ color: '#10b981', fontFamily: 'monospace' }}>{userIp}</span></p>
         </div>
-        <SignoutButton />
+        <div style={{ fontSize: '0.8rem', color: '#a1a1aa', background: 'rgba(255,255,255,0.05)', padding: '0.4rem 0.8rem', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.1)' }}>
+          ⚡ Zero-Login Onboarding
+        </div>
       </header>
 
       <div style={{ marginBottom: '2rem' }}>
@@ -45,11 +35,11 @@ export default async function Home() {
         <div className="glass-panel">
           <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem' }}>
             <div style={{ width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#10b981', marginRight: '12px' }}></div>
-            <h2 style={{ margin: 0 }}>Your Projects</h2>
+            <h2 style={{ margin: 0 }}>Your IP Projects</h2>
           </div>
           
           {!projects || projects.length === 0 ? (
-            <p style={{ color: '#a1a1aa' }}>You currently have no projects. Click the button above to create your first Memory Bank!</p>
+            <p style={{ color: '#a1a1aa' }}>You currently have no projects created from this IP address ({userIp}). Click the button above to create your first Memory Bank!</p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {projects.map((project) => (

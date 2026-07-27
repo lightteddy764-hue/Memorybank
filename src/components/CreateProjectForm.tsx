@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { createProject } from '@/app/auth/actions';
+import { createProject } from '@/app/actions';
 
 export default function CreateProjectForm() {
   const [error, setError] = useState<string | null>(null);

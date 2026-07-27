@@ -5,6 +5,7 @@ create extension if not exists vector;
 create table projects (
   id uuid primary key default gen_random_uuid(),
   user_id uuid references auth.users(id),
+  user_ip text,
   name text not null,
   description text,
   api_key uuid default gen_random_uuid() not null unique,

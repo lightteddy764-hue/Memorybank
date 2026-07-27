@@ -1,0 +1,36 @@
+'use server'
+
+import { revalidatePath } from 'next/cache'
+import { headers } from 'next/headers'
+import { supabaseAdmin } from '@/utils/supabase/server'
+
+export async function getUserIp() {
+  const headersList = await headers();
+  const forwardedFor = headersList.get('x-forwarded-for');
+  const realIp = headersList.get('x-real-ip');
+  return forwardedFor ? forwardedFor.split(',')[0].trim() : (realIp || '127.0.0.1');
+}
+
+export async function createProject(formData: FormData) {
+  const ip = await getUserIp();
+  
+  const name = formData.get('name') as string;
+  const description = formData.get('description') as string;
+
+  if (!name) {
+    return { error: 'Project name is required' }
+  }
+
+  const { error } = await supabaseAdmin
+    .from('projects')
+    .insert([
+      { name, description, user_ip: ip }
+    ])
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  revalidatePath('/', 'layout')
+  return { success: true }
+}
