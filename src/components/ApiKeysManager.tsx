@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Key, Copy, Check, Plus, Eye, EyeOff, Trash2, Loader2 } from 'lucide-react';
+import { Key, Copy, Check, Plus, Eye, EyeOff, Trash2, Loader2, Sparkles } from 'lucide-react';
 import { useUI } from '@/context/UIContext';
 
 interface UserApiKey {
