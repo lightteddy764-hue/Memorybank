@@ -254,7 +254,7 @@ export default function KnowledgeGraphView({ projects, memories }: KnowledgeGrap
             {hoveredNode && (
               <div style={{ position: 'absolute', bottom: '24px', right: '24px', maxWidth: '350px', padding: '16px', borderRadius: '12px', background: 'rgba(15, 15, 25, 0.95)', border: '1px solid rgba(255,255,255,0.15)', boxShadow: '0 8px 30px rgba(0,0,0,0.6)', pointerEvents: 'none', zIndex: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                  <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: hoveredNode.color, boxShadow: \`0 0 8px \${hoveredNode.color}\` }} />
+                  <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: hoveredNode.color, boxShadow: `0 0 8px ${hoveredNode.color}` }} />
                   <span style={{ fontSize: '0.75rem', fontFamily: 'monospace', textTransform: 'uppercase', color: '#e4e4e7', letterSpacing: '0.05em' }}>
                     {hoveredNode.type.toUpperCase()}
                   </span>
