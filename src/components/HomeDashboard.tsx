@@ -2,6 +2,7 @@
 
 import React, { useMemo } from 'react';
 import { Folder, MoreVertical, Plus, Activity, ArrowUpRight, BarChart3, Database, Key, Network } from 'lucide-react';
+import { MemoryGraph } from '@supermemory/memory-graph';
 
 interface Project {
   id: string;
@@ -277,57 +278,43 @@ export default function HomeDashboard({ projects, memories, onSelectProject, onO
                   );
                 }
 
-                const nodes: any[] = [];
-                const lines: any[] = [];
-                
-                // Central node (the User / System)
-                nodes.push({ id: 'center', x: 50, y: 50, size: 12, color: '#fff', glow: true });
-
-                // Project nodes scattered around the center
-                projects.slice(0, 5).forEach((proj, i, arr) => {
-                  const angle = (i / arr.length) * Math.PI * 2;
-                  const radius = 25; // 25% from center
-                  const x = 50 + Math.cos(angle) * radius;
-                  const y = 50 + Math.sin(angle) * radius;
-                  nodes.push({ id: proj.id, x, y, size: 8, color: '#a1a1aa' });
-                  lines.push({ x1: 50, y1: 50, x2: x, y2: y, stroke: 'rgba(255,255,255,0.1)' });
-
-                  // Memory nodes for this project
-                  const projMems = memories.filter(m => m.project_id === proj.id).slice(0, 3);
-                  projMems.forEach((mem, j) => {
-                    const mAngle = angle + ((j - 1) * 0.5);
-                    const mRadius = 15;
-                    const mx = x + Math.cos(mAngle) * mRadius;
-                    const my = y + Math.sin(mAngle) * mRadius;
-                    nodes.push({ id: mem.id, x: mx, y: my, size: 4, color: '#71717a' });
-                    lines.push({ x1: x, y1: y, x2: mx, y2: my, stroke: 'rgba(255,255,255,0.05)' });
-                  });
+                // Map data for Supermemory Graph
+                const mappedDocuments = projects.map((proj) => {
+                  const projMemories = memories.filter(m => m.project_id === proj.id).slice(0, 5); // Limit memories for dashboard
+                  
+                  return {
+                    id: proj.id,
+                    title: proj.name,
+                    summary: `Project Hub`,
+                    documentType: 'project_hub',
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                    memories: projMemories.map((m) => ({
+                      id: m.id,
+                      memory: m.content || 'Untitled',
+                      content: m.content,
+                      isStatic: true,
+                      spaceId: proj.id,
+                      isLatest: true,
+                      isForgotten: false,
+                      forgetAfter: null,
+                      forgetReason: null,
+                      version: 1,
+                      parentMemoryId: null,
+                      rootMemoryId: null,
+                      createdAt: m.created_at || new Date().toISOString(),
+                      updatedAt: new Date().toISOString(),
+                      relation: 'derives' as any
+                    }))
+                  };
                 });
 
                 return (
-                  <>
-                    <svg width="100%" height="100%" style={{ position: 'absolute', top: 0, left: 0 }}>
-                      {lines.map((line, i) => (
-                        <line key={i} x1={`${line.x1}%`} y1={`${line.y1}%`} x2={`${line.x2}%`} y2={`${line.y2}%`} stroke={line.stroke} strokeWidth="1" />
-                      ))}
-                    </svg>
-                    {nodes.map(node => (
-                      <div 
-                        key={node.id} 
-                        style={{ 
-                          position: 'absolute', 
-                          top: `${node.y}%`, 
-                          left: `${node.x}%`, 
-                          transform: 'translate(-50%, -50%)', 
-                          width: `${node.size}px`, 
-                          height: `${node.size}px`, 
-                          borderRadius: '50%', 
-                          background: node.color, 
-                          boxShadow: node.glow ? `0 0 10px ${node.color}` : 'none' 
-                        }} 
-                      />
-                    ))}
-                  </>
+                  <MemoryGraph 
+                    documents={mappedDocuments}
+                    variant="consumer" // Consumer variant might look cleaner for a small dashboard widget
+                    isLoading={false}
+                  />
                 );
               })()}
             </div>
