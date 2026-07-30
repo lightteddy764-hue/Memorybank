@@ -104,8 +104,9 @@ export default function DashboardLayout({
               <Cpu style={{ width: '32px', height: '32px', color: '#ededed' }} />
             </div>
             <h3 style={{ fontSize: '1.25rem', fontWeight: 600, color: '#fff', marginBottom: '8px' }}>No Projects Found</h3>
-            <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', maxWidth: '450px', marginBottom: '24px', lineHeight: 1.6 }}>
-              Your Memory Bank is empty. Create your first project to generate an API key and start streaming graph-linked memories from your AI assistant.
+            <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', maxWidth: '500px', marginBottom: '24px', lineHeight: 1.6 }}>
+              Your Memory Bank is empty. Create your first project manually to generate your master API Key. 
+              Once generated, you can connect your AI assistant (via MCP), and it will be able to create future projects and manage memories autonomously!
             </p>
             <button
               onClick={() => setIsCreateModalOpen(true)}

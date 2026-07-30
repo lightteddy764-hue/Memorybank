@@ -77,6 +77,18 @@ export async function POST(request: Request) {
               name: "get_project_profile",
               description: "Get an instant <50ms profile of the connected project including static architecture facts and graph nodes.",
               inputSchema: { type: "object", properties: {} },
+            },
+            {
+              name: "create_project",
+              description: "Create a new Memory Bank project workspace. Returns the new project ID and its dedicated API key.",
+              inputSchema: {
+                type: "object",
+                properties: {
+                  name: { type: "string", description: "The name of the new project." },
+                  description: { type: "string", description: "Optional description of the project." }
+                },
+                required: ["name"],
+              },
             }
           ]
         }
@@ -91,6 +103,7 @@ export async function POST(request: Request) {
       let endpoint = "/api/memory/search";
       if (name === "add_memory") endpoint = "/api/memory/add";
       if (name === "get_project_profile") endpoint = "/api/memory/profile";
+      if (name === "create_project") endpoint = "/api/project/create";
 
       const internalRes = await fetch(`${baseUrl}${endpoint}`, {
         method: "POST",
