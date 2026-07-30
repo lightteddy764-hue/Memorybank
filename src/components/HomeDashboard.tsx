@@ -267,17 +267,69 @@ export default function HomeDashboard({ projects, memories, onSelectProject, onO
               <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>Visualizing {totalEntities} entities</span>
             </div>
             <div style={{ height: '180px', background: 'radial-gradient(circle at center, rgba(255,255,255,0.05) 0%, transparent 70%)', position: 'relative', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.02)', overflow: 'hidden' }}>
-              {/* Mock Nodes - for visual appeal representing the graph structure */}
-              <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '12px', height: '12px', borderRadius: '50%', background: '#fff', boxShadow: '0 0 10px #fff' }} />
-              <div style={{ position: 'absolute', top: '30%', left: '30%', width: '8px', height: '8px', borderRadius: '50%', background: '#a1a1aa' }} />
-              <div style={{ position: 'absolute', top: '70%', left: '40%', width: '10px', height: '10px', borderRadius: '50%', background: '#e4e4e7' }} />
-              <div style={{ position: 'absolute', top: '40%', left: '70%', width: '6px', height: '6px', borderRadius: '50%', background: '#71717a' }} />
-              <svg width="100%" height="100%" style={{ position: 'absolute', top: 0, left: 0 }}>
-                <line x1="50%" y1="50%" x2="30%" y2="30%" stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
-                <line x1="50%" y1="50%" x2="40%" y2="70%" stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
-                <line x1="50%" y1="50%" x2="70%" y2="40%" stroke="rgba(255,255,255,0.1)" strokeWidth="1" />
-                <line x1="30%" y1="30%" x2="40%" y2="70%" stroke="rgba(255,255,255,0.05)" strokeWidth="1" />
-              </svg>
+              {/* Dynamic Graph Nodes */}
+              {(() => {
+                if (projects.length === 0) {
+                  return (
+                    <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                      Graph uninitialized
+                    </div>
+                  );
+                }
+
+                const nodes: any[] = [];
+                const lines: any[] = [];
+                
+                // Central node (the User / System)
+                nodes.push({ id: 'center', x: 50, y: 50, size: 12, color: '#fff', glow: true });
+
+                // Project nodes scattered around the center
+                projects.slice(0, 5).forEach((proj, i, arr) => {
+                  const angle = (i / arr.length) * Math.PI * 2;
+                  const radius = 25; // 25% from center
+                  const x = 50 + Math.cos(angle) * radius;
+                  const y = 50 + Math.sin(angle) * radius;
+                  nodes.push({ id: proj.id, x, y, size: 8, color: '#a1a1aa' });
+                  lines.push({ x1: 50, y1: 50, x2: x, y2: y, stroke: 'rgba(255,255,255,0.1)' });
+
+                  // Memory nodes for this project
+                  const projMems = memories.filter(m => m.project_id === proj.id).slice(0, 3);
+                  projMems.forEach((mem, j) => {
+                    const mAngle = angle + ((j - 1) * 0.5);
+                    const mRadius = 15;
+                    const mx = x + Math.cos(mAngle) * mRadius;
+                    const my = y + Math.sin(mAngle) * mRadius;
+                    nodes.push({ id: mem.id, x: mx, y: my, size: 4, color: '#71717a' });
+                    lines.push({ x1: x, y1: y, x2: mx, y2: my, stroke: 'rgba(255,255,255,0.05)' });
+                  });
+                });
+
+                return (
+                  <>
+                    <svg width="100%" height="100%" style={{ position: 'absolute', top: 0, left: 0 }}>
+                      {lines.map((line, i) => (
+                        <line key={i} x1={`${line.x1}%`} y1={`${line.y1}%`} x2={`${line.x2}%`} y2={`${line.y2}%`} stroke={line.stroke} strokeWidth="1" />
+                      ))}
+                    </svg>
+                    {nodes.map(node => (
+                      <div 
+                        key={node.id} 
+                        style={{ 
+                          position: 'absolute', 
+                          top: `${node.y}%`, 
+                          left: `${node.x}%`, 
+                          transform: 'translate(-50%, -50%)', 
+                          width: `${node.size}px`, 
+                          height: `${node.size}px`, 
+                          borderRadius: '50%', 
+                          background: node.color, 
+                          boxShadow: node.glow ? `0 0 10px ${node.color}` : 'none' 
+                        }} 
+                      />
+                    ))}
+                  </>
+                );
+              })()}
             </div>
           </div>
 

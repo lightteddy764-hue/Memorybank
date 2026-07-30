@@ -45,7 +45,7 @@ export default function DashboardLayout({
     <div className="workspace-layout">
       
       {/* Left Sidebar */}
-      <Sidebar userEmail={userEmail} />
+      <Sidebar userEmail={userEmail} userName={userName} memories={memories} />
 
       {/* Main Workspace Area */}
       <main className="workspace-main" style={{ padding: '24px 32px' }}>
