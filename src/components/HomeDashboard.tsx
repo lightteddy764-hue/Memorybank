@@ -16,6 +16,7 @@ interface Memory {
   id: string;
   project_id: string;
   type: string;
+  content?: string;
   created_at: string;
   entities?: string[];
 }
