@@ -227,7 +227,11 @@ export default function KnowledgeGraphView({ projects, memories }: KnowledgeGrap
               width={dimensions.width}
               height={dimensions.height}
               graphData={graphData}
-              nodeCanvasObject={renderNode}
+              backgroundColor="transparent"
+              // Organic Neural Network Curved Links
+              linkCurvature={0.25}
+              linkCurveRotation={(link: any) => (link.source % 2 === 0 ? 1 : -1) * Math.PI / 4}
+              
               nodePointerAreaPaint={(node: any, color: string, ctx: CanvasRenderingContext2D) => {
                 const radius = Math.sqrt(node.val) * 2 + 4;
                 ctx.fillStyle = color;
@@ -235,14 +239,75 @@ export default function KnowledgeGraphView({ projects, memories }: KnowledgeGrap
                 ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI, false);
                 ctx.fill();
               }}
-              linkDirectionalParticles={2}
-              linkDirectionalParticleSpeed={0.005}
-              linkDirectionalParticleWidth={1.5}
-              linkDirectionalParticleColor={(link: any) => link.color}
+              nodeCanvasObject={(node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
+                const label = node.name;
+                const fontSize = 12 / globalScale;
+                const radius = Math.sqrt(node.val) * 2;
+                
+                // Neural Glow Effect
+                ctx.save();
+                ctx.globalCompositeOperation = 'lighter'; // Additive blending for pure light effect
+                ctx.shadowColor = node.color;
+                ctx.shadowBlur = radius * 3;
+                
+                // Inner core
+                ctx.beginPath();
+                ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI, false);
+                ctx.fillStyle = node.color;
+                ctx.fill();
+
+                // Core highlight (white hot center)
+                ctx.beginPath();
+                ctx.arc(node.x, node.y, radius * 0.4, 0, 2 * Math.PI, false);
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                ctx.fill();
+                ctx.restore();
+
+                // Hover ring
+                if (hoveredNode?.id === node.id) {
+                  ctx.beginPath();
+                  ctx.arc(node.x, node.y, radius + 4, 0, 2 * Math.PI, false);
+                  ctx.lineWidth = 1.5 / globalScale;
+                  ctx.strokeStyle = '#ffffff';
+                  ctx.stroke();
+                }
+
+                // Render Text Labels
+                if (globalScale > 1.2 || node.type === 'hub' || node.type === 'project' || hoveredNode?.id === node.id) {
+                  ctx.textAlign = 'center';
+                  ctx.textBaseline = 'middle';
+                  ctx.font = `${node.type === 'hub' ? 'bold ' : ''}${Math.max(fontSize, 3)}px Inter, sans-serif`;
+                  ctx.fillStyle = node.type === 'hub' ? '#ffffff' : 'rgba(244, 244, 245, 0.9)';
+                  
+                  // Text background for readability
+                  const textWidth = ctx.measureText(label).width;
+                  const bgY = node.y + radius + (fontSize + 4);
+                  ctx.fillStyle = 'rgba(10, 10, 16, 0.7)';
+                  ctx.fillRect(node.x - textWidth/2 - 2, bgY - fontSize/2 - 2, textWidth + 4, fontSize + 4);
+                  
+                  ctx.fillStyle = node.type === 'hub' ? '#ffffff' : 'rgba(244, 244, 245, 0.9)';
+                  ctx.fillText(label, node.x, bgY);
+                }
+              }}
+              
+              // Electricity / Synapse Firing Effect
+              linkDirectionalParticles={4}
+              linkDirectionalParticleSpeed={0.015} // Faster, like electricity
+              linkDirectionalParticleWidth={2}
+              linkDirectionalParticleColor={() => 'rgba(255, 255, 255, 0.8)'}
               linkColor={(link: any) => link.color}
-              linkWidth={1}
+              linkWidth={1.5}
+              
+              // Physics settings for a sprawling neural net look
+              d3Force={(d3: any, d3Force: any) => {
+                // Increase repulsion so it spreads out more like a neural net
+                d3.force('charge').strength(-300);
+                // Make links act like bouncy springs
+                d3.force('link').distance(60);
+              }}
               cooldownTicks={150}
-              d3VelocityDecay={0.3} // Higher friction so it settles faster
+              d3VelocityDecay={0.2}
+              
               onNodeHover={(node: any) => setHoveredNode(node || null)}
               onNodeDragEnd={(node: any) => {
                 node.fx = node.x;
