@@ -137,7 +137,7 @@ export async function POST(request: Request) {
         { 
           project_id: project.id, 
           content, 
-          type,
+          type: resolvedType,
           entities: resolvedEntities,
           related_memory_ids: resolvedRelations
         }
@@ -154,7 +154,7 @@ export async function POST(request: Request) {
           { 
             project_id: project.id, 
             content, 
-            type
+            type: resolvedType
           }
         ])
         .select()
