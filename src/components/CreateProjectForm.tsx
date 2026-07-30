@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { createProject } from '@/app/actions';
+import { useUI } from '@/context/UIContext';
 
 export default function CreateProjectForm({ 
   externalOpen, 
@@ -10,6 +11,7 @@ export default function CreateProjectForm({
   externalOpen?: boolean; 
   onCloseExternal?: () => void; 
 } = {}) {
+  const { showToast } = useUI();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [internalOpen, setInternalOpen] = useState(false);
@@ -27,7 +29,9 @@ export default function CreateProjectForm({
     const res = await createProject(formData);
     if (res && res.error) {
       setError(res.error);
+      showToast({ message: res.error, type: 'error' });
     } else {
+      showToast({ message: 'Project successfully created!', type: 'success' });
       handleClose();
     }
     setLoading(false);

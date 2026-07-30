@@ -17,6 +17,8 @@ export const metadata: Metadata = {
   description: "Persistent memory and semantic search for AI agents",
 };
 
+import { UIProvider } from "@/context/UIContext";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -24,7 +26,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
-      <body>{children}</body>
+      <body>
+        <UIProvider>
+          {children}
+        </UIProvider>
+      </body>
     </html>
   );
 }

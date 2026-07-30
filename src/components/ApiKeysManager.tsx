@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Key, Copy, Check, Plus, Eye, EyeOff, Trash2, Loader2 } from 'lucide-react';
+import { useUI } from '@/context/UIContext';
 
 interface UserApiKey {
   id: string;
@@ -18,6 +19,7 @@ interface ApiKeysManagerProps {
 
 export default function ApiKeysManager({ apiKeys = [] }: ApiKeysManagerProps) {
   const router = useRouter();
+  const { showToast, confirm } = useUI();
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [visibleKeys, setVisibleKeys] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
@@ -25,6 +27,7 @@ export default function ApiKeysManager({ apiKeys = [] }: ApiKeysManagerProps) {
   const copyToClipboard = (key: string) => {
     navigator.clipboard.writeText(key);
     setCopiedKey(key);
+    showToast({ message: 'Key copied to clipboard!', type: 'success' });
     setTimeout(() => setCopiedKey(null), 2000);
   };
 
@@ -39,7 +42,14 @@ export default function ApiKeysManager({ apiKeys = [] }: ApiKeysManagerProps) {
   };
 
   const handleRevoke = async (id: string) => {
-    if (confirm('Are you sure you want to revoke this API key? This action cannot be undone.')) {
+    const confirmed = await confirm({
+      title: 'Revoke API Key',
+      description: 'Are you sure you want to revoke this API key? Any MCP servers using this key will immediately lose access. This action cannot be undone.',
+      confirmText: 'Revoke Key',
+      danger: true
+    });
+    
+    if (confirmed) {
       try {
         setIsLoading(true);
         const res = await fetch('/api/keys/revoke', {
@@ -48,9 +58,10 @@ export default function ApiKeysManager({ apiKeys = [] }: ApiKeysManagerProps) {
           body: JSON.stringify({ id })
         });
         if (!res.ok) throw new Error('Failed to revoke key');
+        showToast({ message: 'API Key successfully revoked', type: 'success' });
         router.refresh();
       } catch (err: any) {
-        alert(err.message || 'Something went wrong');
+        showToast({ message: err.message || 'Something went wrong', type: 'error' });
       } finally {
         setIsLoading(false);
       }
@@ -66,9 +77,10 @@ export default function ApiKeysManager({ apiKeys = [] }: ApiKeysManagerProps) {
         body: JSON.stringify({ name: 'Master Key' })
       });
       if (!res.ok) throw new Error('Failed to create key');
+      showToast({ message: 'Master Key successfully created', type: 'success' });
       router.refresh();
     } catch (err: any) {
-      alert(err.message || 'Something went wrong');
+      showToast({ message: err.message || 'Something went wrong', type: 'error' });
     } finally {
       setIsLoading(false);
     }
