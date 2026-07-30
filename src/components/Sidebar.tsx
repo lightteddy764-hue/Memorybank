@@ -15,19 +15,21 @@ interface SidebarProps {
   userEmail: string;
   userName: string;
   memories: Memory[];
+  activeTab: string;
+  onSelectTab: (tab: string) => void;
 }
 
-export default function Sidebar({ userEmail, userName, memories }: SidebarProps) {
+export default function Sidebar({ userEmail, userName, memories, activeTab, onSelectTab }: SidebarProps) {
   const navItems = [
-    { icon: Home, label: 'Home', active: true },
-    { icon: Folder, label: 'Projects' },
-    { icon: Database, label: 'Memories' },
-    { icon: Share2, label: 'Knowledge Graph' },
-    { icon: Key, label: 'API Keys' },
-    { icon: BarChart3, label: 'Usage' },
-    { icon: Settings, label: 'Settings', spacer: true },
-    { icon: CreditCard, label: 'Billing' },
-    { icon: FileText, label: 'Docs' },
+    { icon: Home, label: 'Home', active: activeTab === 'Home' },
+    { icon: Folder, label: 'Projects', active: activeTab === 'Projects' },
+    { icon: Database, label: 'Memories', active: activeTab === 'Memories' },
+    { icon: Share2, label: 'Knowledge Graph', active: activeTab === 'Knowledge Graph' },
+    { icon: Key, label: 'API Keys', active: activeTab === 'API Keys' },
+    { icon: BarChart3, label: 'Usage', active: activeTab === 'Usage' },
+    { icon: Settings, label: 'Settings', spacer: true, active: activeTab === 'Settings' },
+    { icon: CreditCard, label: 'Billing', active: activeTab === 'Billing' },
+    { icon: FileText, label: 'Docs', active: activeTab === 'Docs' },
   ];
 
   // Calculate real storage footprint
@@ -65,6 +67,7 @@ export default function Sidebar({ userEmail, userName, memories }: SidebarProps)
             <React.Fragment key={item.label}>
               {item.spacer && <div style={{ height: '24px' }} />}
               <button
+                onClick={() => onSelectTab(item.label)}
                 className={`sidebar-item ${item.active ? 'sidebar-item-active' : ''}`}
                 style={{
                   justifyContent: 'flex-start',

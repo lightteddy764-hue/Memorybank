@@ -1,9 +1,17 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Sidebar from './Sidebar';
 import ProjectDashboard from './ProjectDashboard';
 import HomeDashboard from './HomeDashboard';
+import GlobalProjects from './GlobalProjects';
+import GlobalMemories from './GlobalMemories';
+import KnowledgeGraphView from './KnowledgeGraphView';
+import ApiKeysManager from './ApiKeysManager';
+import AnalyticsDashboard from './AnalyticsDashboard';
+import SettingsView from './SettingsView';
+import BillingView from './BillingView';
+import DocsView from './DocsView';
 import CreateProjectForm from './CreateProjectForm';
 import { Plus, Search, Bell } from 'lucide-react';
 
@@ -37,15 +45,67 @@ export default function DashboardLayout({
   userName: string;
 }) {
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<string>('Home');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const selectedProject = selectedProjectId ? projects.find(p => p.id === selectedProjectId) : null;
+
+  const handleSelectTab = (tab: string) => {
+    setActiveTab(tab);
+    setSelectedProjectId(null); // Clear selected project when navigating away
+  };
+
+  const renderContent = () => {
+    if (selectedProject) {
+      return (
+        <div>
+          <div style={{ marginBottom: '24px' }}>
+            <button 
+              onClick={() => setSelectedProjectId(null)}
+              style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '0.875rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              &larr; Back to Dashboard
+            </button>
+          </div>
+          <ProjectDashboard project={selectedProject} allMemories={memories} />
+        </div>
+      );
+    }
+
+    switch (activeTab) {
+      case 'Projects':
+        return <GlobalProjects projects={projects} memories={memories} onSelectProject={setSelectedProjectId} onOpenCreateModal={() => setIsCreateModalOpen(true)} />;
+      case 'Memories':
+        return <GlobalMemories projects={projects} memories={memories} />;
+      case 'Knowledge Graph':
+        return <KnowledgeGraphView projects={projects} memories={memories} />;
+      case 'API Keys':
+        return <ApiKeysManager projects={projects} />;
+      case 'Usage':
+        return <AnalyticsDashboard projects={projects} memories={memories} />;
+      case 'Settings':
+        return <SettingsView userName={userName} userEmail={userEmail} />;
+      case 'Billing':
+        return <BillingView />;
+      case 'Docs':
+        return <DocsView />;
+      case 'Home':
+      default:
+        return <HomeDashboard 
+          projects={projects} 
+          memories={memories} 
+          onSelectProject={setSelectedProjectId} 
+          onOpenCreateModal={() => setIsCreateModalOpen(true)} 
+          userName={userName}
+        />;
+    }
+  };
 
   return (
     <div className="workspace-layout">
       
       {/* Left Sidebar */}
-      <Sidebar userEmail={userEmail} userName={userName} memories={memories} />
+      <Sidebar userEmail={userEmail} userName={userName} memories={memories} activeTab={activeTab} onSelectTab={handleSelectTab} />
 
       {/* Main Workspace Area */}
       <main className="workspace-main" style={{ padding: '24px 32px' }}>
@@ -85,27 +145,7 @@ export default function DashboardLayout({
         </header>
 
         {/* Dashboard Content */}
-        {selectedProject ? (
-          <div>
-            <div style={{ marginBottom: '24px' }}>
-              <button 
-                onClick={() => setSelectedProjectId(null)}
-                style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '0.875rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-              >
-                &larr; Back to Dashboard
-              </button>
-            </div>
-            <ProjectDashboard project={selectedProject} allMemories={memories} />
-          </div>
-        ) : (
-          <HomeDashboard 
-            projects={projects} 
-            memories={memories} 
-            onSelectProject={setSelectedProjectId} 
-            onOpenCreateModal={() => setIsCreateModalOpen(true)} 
-            userName={userName}
-          />
-        )}
+        {renderContent()}
 
       </main>
 
