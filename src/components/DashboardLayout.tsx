@@ -78,14 +78,25 @@ export default function DashboardLayout({
             </h2>
           </div>
 
-          <button
-            onClick={() => setIsCreateModalOpen(true)}
-            className="btn-secondary"
-            style={{ padding: '10px 18px', background: 'rgba(255,255,255,0.06)' }}
-          >
-            <Plus style={{ width: '16px', height: '16px', color: '#06b6d4' }} />
-            <span>New Project Bank</span>
-          </button>
+          <div style={{ display: 'flex', gap: '12px' }}>
+            <button
+              onClick={() => setIsCreateModalOpen(true)}
+              className="btn-secondary"
+              style={{ padding: '10px 18px', background: 'rgba(255,255,255,0.06)' }}
+            >
+              <Plus style={{ width: '16px', height: '16px', color: '#06b6d4' }} />
+              <span>New Project Bank</span>
+            </button>
+            <form action="/auth/signout" method="post">
+              <button
+                type="submit"
+                className="btn-secondary"
+                style={{ padding: '10px 18px', background: 'rgba(239, 68, 68, 0.1)', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.2)' }}
+              >
+                Sign Out
+              </button>
+            </form>
+          </div>
         </header>
 
         {/* Dashboard Content */}
@@ -94,7 +105,7 @@ export default function DashboardLayout({
             <div style={{ width: '70px', height: '70px', borderRadius: '18px', background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.2) 0%, rgba(139, 92, 246, 0.2) 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '20px', border: '1px solid rgba(6, 182, 212, 0.3)', boxShadow: '0 8px 30px rgba(6, 182, 212, 0.15)' }}>
               <Cpu style={{ width: '36px', height: '36px', color: '#06b6d4' }} />
             </div>
-            <h3 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#fff', marginBottom: '10px' }}>No Projects for IP Address ({userIp})</h3>
+            <h3 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#fff', marginBottom: '10px' }}>No Projects Found</h3>
             <p style={{ fontSize: '0.95rem', color: '#a1a1aa', maxWidth: '450px', marginBottom: '24px', lineHeight: 1.6 }}>
               Your Memory Bank is empty. Create your first project to generate an API key and start streaming graph-linked memories from your AI assistant.
             </p>

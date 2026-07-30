@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache'
 import { headers } from 'next/headers'
-import { supabaseAdmin } from '@/utils/supabase/server'
+import { supabaseAdmin, createClient } from '@/utils/supabase/server'
 
 export async function getUserIp() {
   const headersList = await headers();
@@ -19,6 +19,13 @@ export async function createProject(formData: FormData) {
     return { error: 'Missing Render Env Var: Please add SUPABASE_SERVICE_ROLE_KEY to your Render dashboard settings!' };
   }
 
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { error: 'You must be logged in to create a project' };
+  }
+
   const ip = await getUserIp();
   
   const name = formData.get('name') as string;
@@ -31,7 +38,7 @@ export async function createProject(formData: FormData) {
   const { error } = await supabaseAdmin
     .from('projects')
     .insert([
-      { name, description, user_ip: ip }
+      { name, description, user_ip: ip, user_id: user.id }
     ])
 
   if (error) {

@@ -1,7 +1,12 @@
 -- ============================================================
--- Memory Bank — Performance Indexes
+-- Memory Bank — Schema Upgrades & Performance Indexes
 -- Run this in your Supabase SQL Editor (one-time setup)
 -- ============================================================
+
+-- 0. Ensure missing graph columns exist (fixes ERROR 42703)
+ALTER TABLE memories ADD COLUMN IF NOT EXISTS entities text[];
+ALTER TABLE memories ADD COLUMN IF NOT EXISTS related_memory_ids uuid[];
+ALTER TABLE memories ADD COLUMN IF NOT EXISTS embedding vector(768);
 
 -- 1. Critical: speeds up ALL project-scoped memory queries
 CREATE INDEX IF NOT EXISTS idx_memories_project_id 

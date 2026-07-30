@@ -1,18 +1,24 @@
-import { supabaseAdmin } from '@/utils/supabase/server';
-import { getUserIp } from '@/app/actions';
+import { supabaseAdmin, createClient } from '@/utils/supabase/server';
 import DashboardLayout from '@/components/DashboardLayout';
+import { redirect } from 'next/navigation';
 
 // Opt out of static rendering so we always see the latest projects
 export const dynamic = 'force-dynamic';
 
 export default async function Home() {
-  const userIp = await getUserIp();
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  
+  if (!user) {
+    redirect('/login');
+  }
 
   // Fetch projects and all memories in parallel (not serial) — Supermemory pattern
+  // Now scoped to the authenticated user's ID
   const { data: projects } = await supabaseAdmin
     .from('projects')
     .select('*')
-    .eq('user_ip', userIp)
+    .eq('user_id', user.id)
     .order('created_at', { ascending: false });
 
   const projectIds = (projects || []).map(p => p.id);
@@ -31,7 +37,7 @@ export default async function Home() {
     <DashboardLayout
       projects={projects || []}
       memories={memories}
-      userIp={userIp}
+      userIp={user.email || 'Authenticated User'}
     />
   );
 }
