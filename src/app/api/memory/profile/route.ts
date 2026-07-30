@@ -68,7 +68,13 @@ export async function POST(request: Request) {
       knowledge_graph_nodes: topEntities
     };
 
-    return NextResponse.json({ success: true, profile }, { status: 200 });
+    return NextResponse.json({ success: true, profile }, { 
+      status: 200,
+      headers: {
+        // Cache at Vercel Edge for 30s, allow stale for 60s — dramatically cuts Supabase invocations
+        'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60',
+      }
+    });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
