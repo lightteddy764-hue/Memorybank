@@ -7,7 +7,7 @@ import {
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 
-const NEXT_JS_API_BASE = process.env.NEXT_JS_API_BASE || "https://memorybank-z4dd.onrender.com/api";
+const NEXT_JS_API_BASE = process.env.NEXT_JS_API_BASE || "https://memorybank-omega.vercel.app/api";
 const API_KEY = process.env.MEMORY_BANK_API_KEY;
 
 if (!API_KEY) {
