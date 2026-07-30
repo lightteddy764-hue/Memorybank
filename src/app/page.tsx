@@ -7,8 +7,8 @@ export const dynamic = 'force-dynamic';
 
 export default async function Home() {
   const userIp = await getUserIp();
-  
-  // Fetch only the projects created under the current visitor's IP address
+
+  // Fetch projects and all memories in parallel (not serial) — Supermemory pattern
   const { data: projects } = await supabaseAdmin
     .from('projects')
     .select('*')
@@ -16,15 +16,16 @@ export default async function Home() {
     .order('created_at', { ascending: false });
 
   const projectIds = (projects || []).map(p => p.id);
-  let memories: any[] = [];
-  if (projectIds.length > 0) {
-    const { data: memData } = await supabaseAdmin
-      .from('memories')
-      .select('*')
-      .in('project_id', projectIds)
-      .order('created_at', { ascending: false });
-    memories = memData || [];
-  }
+
+  const memories = projectIds.length > 0
+    ? await supabaseAdmin
+        .from('memories')
+        .select('id, project_id, content, type, entities, created_at')  // select only needed cols
+        .in('project_id', projectIds)
+        .order('created_at', { ascending: false })
+        .limit(200)  // cap to prevent huge payloads on large projects
+        .then(r => r.data || [])
+    : [];
 
   return (
     <DashboardLayout

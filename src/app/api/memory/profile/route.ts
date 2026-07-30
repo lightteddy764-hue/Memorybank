@@ -21,33 +21,45 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid API Key' }, { status: 401 });
     }
 
-    // Fetch all memories for this project
-    const { data: memories, error: memError } = await supabaseAdmin
-      .from('memories')
-      .select('*')
-      .eq('project_id', project.id)
-      .order('created_at', { ascending: false });
+    // Supermemory <50ms profile pattern: Parallel targeted queries instead of 1 massive table scan
+    const [
+      { count: totalMemories },
+      { data: staticFactsData },
+      { data: dynamicContextData },
+      { data: entityData }
+    ] = await Promise.all([
+      // 1. Fast total count (no row data)
+      supabaseAdmin.from('memories').select('*', { count: 'exact', head: true }).eq('project_id', project.id),
+      
+      // 2. Static facts (core knowledge)
+      supabaseAdmin.from('memories')
+        .select('id, content, type, entities')
+        .eq('project_id', project.id)
+        .in('type', ['architecture', 'lessonsLearned'])
+        .order('created_at', { ascending: false })
+        .limit(100),
+        
+      // 3. Dynamic context (recent active memory)
+      supabaseAdmin.from('memories')
+        .select('id, content, created_at, entities')
+        .eq('project_id', project.id)
+        .in('type', ['activeContext', 'general'])
+        .order('created_at', { ascending: false })
+        .limit(5),
+        
+      // 4. Graph entities (lightweight fetch of just the entities column)
+      supabaseAdmin.from('memories')
+        .select('entities')
+        .eq('project_id', project.id)
+        .not('entities', 'is', null)
+    ]);
 
-    if (memError) {
-      console.error('Supabase error:', memError);
-      return NextResponse.json({ error: memError.message }, { status: 500 });
-    }
-
-    const allMemories = memories || [];
-
-    // Separate Static Facts vs Dynamic Active Context (Supermemory style)
-    const staticFacts = allMemories
-      .filter(m => m.type === 'architecture' || m.type === 'lessonsLearned')
-      .map(m => ({ id: m.id, content: m.content, type: m.type, entities: m.entities || [] }));
-
-    const dynamicContext = allMemories
-      .filter(m => m.type === 'activeContext' || m.type === 'general')
-      .slice(0, 5) // top 5 most recent active contexts
-      .map(m => ({ id: m.id, content: m.content, created_at: m.created_at, entities: m.entities || [] }));
+    const staticFacts = staticFactsData || [];
+    const dynamicContext = dynamicContextData || [];
 
     // Aggregate Entity Registry (Knowledge Graph nodes)
     const entityCounts = new Map<string, number>();
-    allMemories.forEach(m => {
+    (entityData || []).forEach(m => {
       (m.entities || []).forEach((ent: string) => {
         entityCounts.set(ent, (entityCounts.get(ent) || 0) + 1);
       });
@@ -61,7 +73,7 @@ export async function POST(request: Request) {
       project: {
         id: project.id,
         name: project.name || 'Untitled Project',
-        total_memories: allMemories.length,
+        total_memories: totalMemories || 0,
       },
       static_facts: staticFacts,
       dynamic_context: dynamicContext,

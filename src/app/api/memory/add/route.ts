@@ -1,24 +1,80 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/utils/supabase/server';
 
+// ── Cognee-inspired entity extraction ───────────────────────────────────────
+// Multi-strategy: tech dictionary + proper nouns + version patterns + hashtags
+const TECH_DICTIONARY = new Set([
+  // JS ecosystem
+  'Next.js','React','Vue','Angular','Svelte','Remix','Astro','Vite','Webpack','Turbopack',
+  'Node.js','Bun','Deno','Express','Fastify','Hono',
+  // DB & Backend
+  'Supabase','PostgreSQL','MySQL','SQLite','MongoDB','Redis','Prisma','Drizzle',
+  'pgvector','GraphQL','REST','tRPC',
+  // Auth & Security
+  'Auth','OAuth','JWT','RLS','RBAC','Clerk','NextAuth','Lucia',
+  // AI / ML
+  'OpenAI','Anthropic','Claude','GPT','LLM','RAG','Vector','Embedding','MCP',
+  'Ollama','LangChain','Vercel AI','Hugging Face',
+  // DevOps / Infra
+  'Vercel','Render','AWS','GCP','Azure','Docker','Kubernetes','GitHub','GitLab',
+  'CI','CD','Nginx','Cloudflare','Tailscale',
+  // Languages
+  'TypeScript','JavaScript','Python','Rust','Go','Java','Swift','Kotlin','C++',
+  // Tools & Patterns
+  'Git','NPM','Yarn','pnpm','ESLint','Prettier','Vitest','Jest','Playwright',
+  'CSS','Tailwind','SaaS','API','SDK','CLI','UI','UX','DX',
+  // Editors / IDEs
+  'Cursor','Windsurf','VSCode','Neovim','Copilot','Antigravity',
+]);
+
 function extractEntities(text: string): string[] {
-  const commonTech = ['Next.js', 'React', 'Render', 'Supabase', 'PostgreSQL', 'TypeScript', 'JavaScript', 'Auth', 'API', 'Database', 'UI', 'Component', 'Hook', 'SQL', 'MCP', 'CSS', 'Tailwind', 'Vector', 'Embedding', 'Node.js', 'Vercel', 'NPM', 'Git', 'GitHub', 'SaaS', 'RLS', 'Schema', 'Migration', 'Docker', 'Python', 'Graph', 'Cursor', 'Windsurf', 'Claude'];
   const found = new Set<string>();
-  commonTech.forEach(tech => {
-    if (new RegExp(`\\b${tech.replace('.', '\\.')}\\b`, 'i').test(text)) {
+
+  // Strategy 1: Match known tech dictionary (case-insensitive)
+  TECH_DICTIONARY.forEach(tech => {
+    const escaped = tech.replace(/\./g, '\\.').replace(/\+/g, '\\+');
+    if (new RegExp(`(?:^|[\\s\\W])${escaped}(?=[\\s\\W]|$)`, 'i').test(text)) {
       found.add(tech);
     }
   });
-  const matches = text.match(/\b[A-Z][a-zA-Z0-9_-]{2,}\b/g);
-  if (matches) {
-    matches.forEach(m => {
-      if (!['The', 'This', 'When', 'With', 'From', 'Have', 'Must', 'After', 'Before', 'Your', 'Our', 'Using', 'Save', 'Note', 'And', 'For', 'But'].includes(m)) {
-        found.add(m);
-      }
-    });
-  }
-  return Array.from(found).slice(0, 8);
+
+  // Strategy 2: Capitalized proper nouns (names, tools, frameworks the dictionary doesn't know)
+  const properNouns = text.match(/\b[A-Z][a-zA-Z0-9.+#-]{2,}\b/g) || [];
+  const STOP_WORDS = new Set(['The','This','When','With','From','Have','Must','After',
+    'Before','Your','Our','Using','Save','Note','And','For','But','That','Will',
+    'Can','Are','Was','Has','Been','They','Also','More','Some','Any','All','Not']);
+  properNouns.forEach(m => {
+    if (!STOP_WORDS.has(m) && !found.has(m)) found.add(m);
+  });
+
+  // Strategy 3: Version patterns (v3.2, @latest, npm:package)
+  const versionMatches = text.match(/\bv?\d+\.\d+(?:\.\d+)?(?:-\w+)?\b/g) || [];
+  versionMatches.forEach(v => found.add(v));
+
+  // Strategy 4: Quoted terms (high-signal: author explicitly called them out)
+  const quoted = text.match(/["'`]([A-Za-z][A-Za-z0-9._-]{1,30})["'`]/g) || [];
+  quoted.forEach(q => found.add(q.replace(/["'`]/g, '')));
+
+  // Strategy 5: Hashtags (#entity)
+  const hashtags = text.match(/#([A-Za-z][A-Za-z0-9_-]+)/g) || [];
+  hashtags.forEach(h => found.add(h.slice(1)));
+
+  return Array.from(found).slice(0, 12); // increased from 8 to 12
 }
+
+// ── Auto-infer memory type from content when not provided ───────────────────
+// Cognee-inspired: avoids requiring AI to always specify a type correctly
+function autoInferType(content: string, explicitType?: string): string {
+  if (explicitType && ['activeContext','lessonsLearned','architecture','general'].includes(explicitType)) {
+    return explicitType;
+  }
+  const lower = content.toLowerCase();
+  if (/\b(architecture|stack|tech|built with|using|setup|infrastructure|database|api|endpoint|deploy)\b/.test(lower)) return 'architecture';
+  if (/\b(lesson|learned|mistake|bug|fixed|issue|problem|solved|gotcha|warning|note:|important)\b/.test(lower)) return 'lessonsLearned';
+  if (/\b(currently|working on|in progress|today|now|active|context|status|blocked|next step)\b/.test(lower)) return 'activeContext';
+  return 'general';
+}
+
 
 export async function POST(request: Request) {
   try {
@@ -42,9 +98,12 @@ export async function POST(request: Request) {
 
     const { content, type, entities, related_memory_ids } = await request.json();
 
-    if (!content || !type) {
-      return NextResponse.json({ error: 'content and type are required' }, { status: 400 });
+    if (!content) {
+      return NextResponse.json({ error: 'content is required' }, { status: 400 });
     }
+
+    // Auto-infer type from content if not provided or invalid (Cognee pattern)
+    const resolvedType = autoInferType(content, type);
 
     const resolvedEntities = (entities && Array.isArray(entities) && entities.length > 0)
       ? entities
@@ -53,6 +112,7 @@ export async function POST(request: Request) {
     const resolvedRelations = (related_memory_ids && Array.isArray(related_memory_ids))
       ? related_memory_ids
       : [];
+
 
     // Insert the memory using the resolved project ID and graph attributes
     let { data, error } = await supabaseAdmin
