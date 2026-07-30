@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react';
 import AdvancedKnowledgeGraph from './AdvancedKnowledgeGraph';
-import { Database, Key, Copy, Check, Clock, Tag, Share2, Sparkles, Activity, Layers, Zap } from 'lucide-react';
+import { Database, Key, Copy, Check, Clock, Tag, Share2, Sparkles, Activity, Layers, Zap, Bot } from 'lucide-react';
+import { useUI } from '@/context/UIContext';
 
 interface Project {
   id: string;
@@ -29,7 +30,9 @@ export default function ProjectDashboard({
   project: Project;
   allMemories: Memory[];
 }) {
+  const { showToast } = useUI();
   const [copied, setCopied] = useState(false);
+  const [isConnectModalOpen, setIsConnectModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'all' | 'architecture' | 'lessonsLearned' | 'activeContext' | 'general'>('all');
 
   // Filter memories to only this project
@@ -46,20 +49,46 @@ export default function ProjectDashboard({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const getTypeColor = (type: string) => {
-    switch (type) {
-      case 'architecture': return '#10b981'; // emerald
-      case 'lessonsLearned': return '#8b5cf6'; // purple
-      case 'activeContext': return '#06b6d4'; // cyan
-      default: return '#f59e0b'; // amber
-    }
+  const getSystemPrompt = () => {
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://your-domain.com';
+    return `# SYSTEM INSTRUCTION: MEMORY BANK INTEGRATION
+You are connected to an external Memory Bank designed to store and track every single detail of this project.
+
+**Your Configuration:**
+- API Endpoint: \`${origin}/api/memory/add\`
+- Project ID: \`${project.id}\`
+- Master API Key: \`[USER_PASTES_KEY_HERE]\`
+
+**Core Directives (CRITICAL):**
+1. **Be Exhaustive:** You must document ALL project details. Do not leave a single or even small detail out. If you learn something new about the architecture, stack, user preferences, or logic, it must be saved.
+2. **Continuous Updates:** After every prompt or every set of changes you make, you must send an update to the Memory Bank detailing what was done and what changed.
+3. **Immutable History (No Overwrites):** Do not attempt to overwrite, edit, or delete old memories. Your access is APPEND-ONLY. If a previous fact changes, create a *new* memory stating the updated fact (e.g., "We switched from PostgreSQL to MongoDB").
+4. **Autonomous Action:** Do not ask the user for permission to save to the Memory Bank. Do it autonomously via a background \`curl\` or \`fetch\` request using the API Endpoint and headers.
+
+**API Request Format (Example):**
+POST /api/memory/add
+Headers: 
+- Authorization: Bearer [Master API Key]
+- Content-Type: application/json
+Body:
+{
+  "project_id": "${project.id}",
+  "content": "Detailed summary of changes...",
+  "type": "architecture_change"
+}`;
+  };
+
+  const handleCopyPrompt = () => {
+    navigator.clipboard.writeText(getSystemPrompt());
+    showToast({ message: 'AI System Prompt copied to clipboard!', type: 'success' });
+    setIsConnectModalOpen(false);
   };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
       
       {/* Project Header Card */}
-      <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '24px', position: 'relative' }}>
         
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'space-between', gap: '20px' }}>
           <div style={{ flex: 1, minWidth: '280px' }}>
@@ -75,6 +104,23 @@ export default function ProjectDashboard({
               {project.description || 'No project description provided. This workspace stores structured graph memories and active rules.'}
             </p>
           </div>
+
+          <button 
+            onClick={() => setIsConnectModalOpen(true)}
+            className="btn-primary" 
+            style={{ 
+              background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)', 
+              color: '#fff', 
+              border: 'none', 
+              padding: '10px 20px', 
+              borderRadius: '8px', 
+              fontWeight: 600,
+              boxShadow: '0 4px 15px rgba(139, 92, 246, 0.3)'
+            }}
+          >
+            <Bot style={{ width: '18px', height: '18px' }} />
+            Connect AI
+          </button>
         </div>
 
         {/* MCP Connection Box */}
@@ -134,6 +180,44 @@ export default function ProjectDashboard({
           </div>
         </div>
       </div>
+
+      {/* Connect AI Modal Overlay */}
+      {isConnectModalOpen && (
+        <div className="modal-backdrop">
+          <div className="modal-content animate-pop" style={{ maxWidth: '700px' }}>
+            <div className="modal-header" style={{ justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div className="modal-icon info" style={{ width: '40px', height: '40px' }}>
+                  <Bot style={{ width: '20px', height: '20px' }} />
+                </div>
+                <h3 className="modal-title">Connect AI to Memory Bank</h3>
+              </div>
+              <button 
+                onClick={() => setIsConnectModalOpen(false)}
+                style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '1.2rem' }}
+              >✕</button>
+            </div>
+            
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem', lineHeight: 1.5, marginBottom: '20px' }}>
+              Copy the system prompt below and paste it into your AI's <strong>System Instructions</strong>, <strong>.cursorrules</strong> file, or <strong>AGENTS.md</strong>. This will give your AI complete autonomy to document its work exhaustively.
+            </p>
+
+            <div style={{ background: '#000', border: '1px solid var(--border-light)', borderRadius: '8px', padding: '16px', overflowY: 'auto', maxHeight: '400px', marginBottom: '24px' }}>
+              <pre style={{ margin: 0, fontSize: '0.8rem', color: '#ededed', fontFamily: 'monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                {getSystemPrompt()}
+              </pre>
+            </div>
+
+            <div className="modal-actions" style={{ marginLeft: 0 }}>
+              <button className="btn-cancel" onClick={() => setIsConnectModalOpen(false)}>Close</button>
+              <button className="btn-confirm" onClick={handleCopyPrompt} style={{ background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)', color: '#fff' }}>
+                <Copy style={{ width: '14px', height: '14px', display: 'inline-block', marginRight: '6px', verticalAlign: 'middle' }} />
+                Copy Prompt to Clipboard
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Advanced Knowledge Graph Section */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
