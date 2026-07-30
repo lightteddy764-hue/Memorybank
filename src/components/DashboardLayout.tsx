@@ -3,8 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
 import ProjectDashboard from './ProjectDashboard';
+import HomeDashboard from './HomeDashboard';
 import CreateProjectForm from './CreateProjectForm';
-import { Plus, Cpu } from 'lucide-react';
+import { Plus, Search, Bell } from 'lucide-react';
 
 interface Project {
   id: string;
@@ -27,99 +28,83 @@ interface Memory {
 export default function DashboardLayout({
   projects,
   memories,
-  userIp
+  userEmail,
+  userName
 }: {
   projects: Project[];
   memories: Memory[];
-  userIp: string;
+  userEmail: string;
+  userName: string;
 }) {
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(
-    projects.length > 0 ? projects[0].id : null
-  );
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-  // Keep selectedProjectId valid if projects list changes
-  useEffect(() => {
-    if (projects.length > 0 && (!selectedProjectId || !projects.some(p => p.id === selectedProjectId))) {
-      setSelectedProjectId(projects[0].id);
-    } else if (projects.length === 0) {
-      setSelectedProjectId(null);
-    }
-  }, [projects, selectedProjectId]);
-
-  const selectedProject = projects.find(p => p.id === selectedProjectId);
+  const selectedProject = selectedProjectId ? projects.find(p => p.id === selectedProjectId) : null;
 
   return (
     <div className="workspace-layout">
       
       {/* Left Sidebar */}
-      <Sidebar
-        projects={projects}
-        selectedProjectId={selectedProjectId}
-        onSelectProject={(id) => setSelectedProjectId(id)}
-        userIp={userIp}
-        onOpenCreateModal={() => setIsCreateModalOpen(true)}
-      />
+      <Sidebar userEmail={userEmail} />
 
       {/* Main Workspace Area */}
-      <main className="workspace-main">
+      <main className="workspace-main" style={{ padding: '24px 32px' }}>
         
-        {/* Top Workspace Bar */}
-        <header style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '16px', borderBottom: '1px solid var(--border-light)', paddingBottom: '20px' }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-              <span className="badge">
-                AI Superhouse 2.0
-              </span>
-              <span style={{ fontSize: '0.8rem', color: 'var(--text-dark)' }}>• Minimalist & Fast</span>
-            </div>
-            <h2 style={{ fontSize: '1.5rem', fontWeight: 600, color: '#fff', margin: 0 }}>
-              {selectedProject ? `Workspace: ${selectedProject.name}` : 'Welcome to Memory Bank'}
-            </h2>
+        {/* Top Navbar */}
+        <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '32px' }}>
+          
+          {/* Search Bar */}
+          <div style={{ position: 'relative', width: '320px' }}>
+            <Search style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', width: '16px', height: '16px', color: 'var(--text-dark)' }} />
+            <input 
+              type="text" 
+              placeholder="Search memories..." 
+              style={{ width: '100%', padding: '10px 10px 10px 36px', background: 'transparent', border: '1px solid var(--border-light)', borderRadius: '8px', color: '#fff', fontSize: '0.875rem', outline: 'none' }}
+            />
+            <div style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '0.7rem', color: 'var(--text-dark)', background: '#18181b', padding: '2px 6px', borderRadius: '4px', border: '1px solid var(--border-light)' }}>⌘K</div>
           </div>
 
-          <div style={{ display: 'flex', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
             <button
               onClick={() => setIsCreateModalOpen(true)}
-              className="btn-secondary"
+              style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#fff', color: '#000', border: 'none', borderRadius: '8px', padding: '8px 16px', fontSize: '0.875rem', fontWeight: 500, cursor: 'pointer' }}
             >
-              <Plus style={{ width: '16px', height: '16px', color: '#ededed' }} />
-              <span>New Project Bank</span>
+              <Plus style={{ width: '16px', height: '16px' }} />
+              New Project
             </button>
-            <form action="/auth/signout" method="post">
-              <button
-                type="submit"
-                className="btn-secondary"
-              >
-                Sign Out
-              </button>
-            </form>
+
+            <button style={{ background: 'transparent', border: '1px solid var(--border-light)', borderRadius: '50%', width: '36px', height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', position: 'relative' }}>
+              <Bell style={{ width: '16px', height: '16px', color: '#fff' }} />
+              <div style={{ position: 'absolute', top: '8px', right: '10px', width: '6px', height: '6px', borderRadius: '50%', background: '#10b981' }} />
+            </button>
+
+            <button style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#18181b', border: '1px solid var(--border-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '0.9rem', fontWeight: 600, cursor: 'pointer' }}>
+              {userName.charAt(0).toUpperCase()}
+            </button>
           </div>
         </header>
 
         {/* Dashboard Content */}
-        {projects.length === 0 ? (
-          <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 20px', textAlign: 'center', margin: 'auto 0', border: '1px dashed var(--border-light)' }}>
-            <div style={{ width: '64px', height: '64px', borderRadius: '8px', background: '#0a0a0a', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '24px', border: '1px solid var(--border-light)' }}>
-              <Cpu style={{ width: '32px', height: '32px', color: '#ededed' }} />
+        {selectedProject ? (
+          <div>
+            <div style={{ marginBottom: '24px' }}>
+              <button 
+                onClick={() => setSelectedProjectId(null)}
+                style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '0.875rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                &larr; Back to Dashboard
+              </button>
             </div>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: 600, color: '#fff', marginBottom: '8px' }}>No Projects Found</h3>
-            <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', maxWidth: '500px', marginBottom: '24px', lineHeight: 1.6 }}>
-              Your Memory Bank is empty. Create your first project manually to generate your master API Key. 
-              Once generated, you can connect your AI assistant (via MCP), and it will be able to create future projects and manage memories autonomously!
-            </p>
-            <button
-              onClick={() => setIsCreateModalOpen(true)}
-              className="btn-primary"
-            >
-              <Plus style={{ width: '16px', height: '16px' }} />
-              <span>Create Your First Memory Bank</span>
-            </button>
+            <ProjectDashboard project={selectedProject} allMemories={memories} />
           </div>
-        ) : selectedProject ? (
-          <ProjectDashboard project={selectedProject} allMemories={memories} />
         ) : (
-          <div style={{ padding: '40px', textAlign: 'center', color: '#a1a1aa' }}>Please select a project from the sidebar.</div>
+          <HomeDashboard 
+            projects={projects} 
+            memories={memories} 
+            onSelectProject={setSelectedProjectId} 
+            onOpenCreateModal={() => setIsCreateModalOpen(true)} 
+            userName={userName}
+          />
         )}
 
       </main>

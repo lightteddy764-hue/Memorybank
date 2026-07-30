@@ -37,7 +37,8 @@ export default async function Home() {
     <DashboardLayout
       projects={projects || []}
       memories={memories}
-      userIp={user.email || 'Authenticated User'}
+      userEmail={user.email || 'user@example.com'}
+      userName={user.user_metadata?.full_name || 'Udita'}
     />
   );
 }
