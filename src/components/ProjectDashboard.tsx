@@ -25,10 +25,12 @@ interface Memory {
 
 export default function ProjectDashboard({
   project,
-  allMemories
+  allMemories,
+  projects = []
 }: {
   project: Project;
   allMemories: Memory[];
+  projects?: Project[];
 }) {
   const { showToast } = useUI();
   const [copied, setCopied] = useState(false);
@@ -229,7 +231,12 @@ Body:
           <span style={{ fontSize: '0.8rem', color: '#71717a' }}>Cognee & Supermemory Force Engine • Scroll to Zoom</span>
         </div>
         
-        <AdvancedKnowledgeGraph memories={projectMemories} />
+        <AdvancedKnowledgeGraph
+          memories={projectMemories}
+          allMemories={allMemories}
+          projects={projects}
+          projectName={project.name}
+        />
       </div>
 
       {/* Activity Feed Section */}

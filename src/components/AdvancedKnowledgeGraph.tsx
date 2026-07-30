@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import dynamic from 'next/dynamic';
-import { Sparkles, Tag, Layers, RefreshCw, Maximize2, Minimize2, X, Info } from 'lucide-react';
+import { Sparkles, Tag, Layers, RefreshCw, Maximize2, Minimize2, X, Info, ChevronDown } from 'lucide-react';
 
 // Dynamically import react-force-graph-2d with SSR disabled
 const ForceGraph2D = dynamic(() => import('react-force-graph-2d'), {
@@ -54,11 +54,20 @@ const CATEGORY_COLORS: Record<string, string> = {
   entity: '#ec4899', // pink
 };
 
+interface Project {
+  id: string;
+  name: string;
+}
+
 export default function AdvancedKnowledgeGraph({
   memories,
+  allMemories,
+  projects = [],
   projectName = 'Project'
 }: {
   memories: Memory[];
+  allMemories?: Memory[];
+  projects?: Project[];
   projectName?: string;
 }) {
   const fgRef = useRef<any>(null);
@@ -68,6 +77,16 @@ export default function AdvancedKnowledgeGraph({
   const [hoveredNode, setHoveredNode] = useState<GraphNode | null>(null);
   const [activeFilter, setActiveFilter] = useState<'all' | 'architecture' | 'lessonsLearned' | 'activeContext'>('all');
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [selectedProjectId, setSelectedProjectId] = useState<string>('current');
+
+  // Resolve which memories to show based on dropdown
+  const activeMemories = useMemo(() => {
+    if (selectedProjectId === 'current' || !allMemories) return memories;
+    if (selectedProjectId === 'all') return allMemories;
+    return allMemories.filter(m => m.project_id === selectedProjectId);
+  }, [selectedProjectId, memories, allMemories]);
+
+  const hasProjectDropdown = projects.length > 0 && allMemories;
 
   // Resize listener
   useEffect(() => {
@@ -92,7 +111,7 @@ export default function AdvancedKnowledgeGraph({
     const links: GraphLink[] = [];
 
     // Filter memories if tab is active
-    const filteredMemories = memories.filter(m => {
+    const filteredMemories = activeMemories.filter(m => {
       if (activeFilter === 'all') return true;
       return m.type === activeFilter;
     });
@@ -178,7 +197,7 @@ export default function AdvancedKnowledgeGraph({
       nodes: Array.from(nodesMap.values()),
       links
     };
-  }, [memories, activeFilter]);
+  }, [activeMemories, activeFilter]);
 
   // Recenter and zoom graph
   const handleZoomToFit = useCallback(() => {
@@ -238,6 +257,42 @@ export default function AdvancedKnowledgeGraph({
 
         {/* Filter & Action Bar */}
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px' }}>
+
+          {/* Project Dropdown — only shown when multiple projects are available */}
+          {hasProjectDropdown && (
+            <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+              <select
+                value={selectedProjectId}
+                onChange={(e) => { setSelectedProjectId(e.target.value); setSelectedNode(null); }}
+                style={{
+                  appearance: 'none',
+                  background: '#18181b',
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  borderRadius: '8px',
+                  color: '#fff',
+                  fontSize: '0.8rem',
+                  fontWeight: 500,
+                  padding: '7px 32px 7px 10px',
+                  cursor: 'pointer',
+                  outline: 'none',
+                  minWidth: '160px',
+                }}
+              >
+                <option value="current">📌 Current Project</option>
+                <option value="all">🌐 All Projects</option>
+                {projects.map(p => {
+                  const count = (allMemories || []).filter(m => m.project_id === p.id).length;
+                  return (
+                    <option key={p.id} value={p.id}>
+                      📁 {p.name} ({count})
+                    </option>
+                  );
+                })}
+              </select>
+              <ChevronDown style={{ position: 'absolute', right: '8px', width: '13px', height: '13px', color: '#71717a', pointerEvents: 'none' }} />
+            </div>
+          )}
+
           <div className="filter-bar">
             <button
               onClick={() => setActiveFilter('all')}

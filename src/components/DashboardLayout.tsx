@@ -77,7 +77,7 @@ export default function DashboardLayout({
               &larr; Back to Dashboard
             </button>
           </div>
-          <ProjectDashboard project={selectedProject} allMemories={memories} />
+          <ProjectDashboard project={selectedProject} allMemories={memories} projects={projects} />
         </div>
       );
     }
