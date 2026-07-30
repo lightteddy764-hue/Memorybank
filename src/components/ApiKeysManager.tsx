@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Key, Copy, Check, Plus, Eye, EyeOff, Trash2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Key, Copy, Check, Plus, Eye, EyeOff, Trash2, Loader2 } from 'lucide-react';
 
 interface UserApiKey {
   id: string;
@@ -16,8 +17,10 @@ interface ApiKeysManagerProps {
 }
 
 export default function ApiKeysManager({ apiKeys = [] }: ApiKeysManagerProps) {
+  const router = useRouter();
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [visibleKeys, setVisibleKeys] = useState<Set<string>>(new Set());
+  const [isLoading, setIsLoading] = useState(false);
 
   const copyToClipboard = (key: string) => {
     navigator.clipboard.writeText(key);
@@ -35,16 +38,40 @@ export default function ApiKeysManager({ apiKeys = [] }: ApiKeysManagerProps) {
     setVisibleKeys(newVisible);
   };
 
-  const handleRevoke = (id: string) => {
+  const handleRevoke = async (id: string) => {
     if (confirm('Are you sure you want to revoke this API key? This action cannot be undone.')) {
-      alert(`Revoke action for key ${id} would be triggered here.`);
-      // TODO: Implement actual API call to DELETE /api/apikey
+      try {
+        setIsLoading(true);
+        const res = await fetch('/api/keys/revoke', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id })
+        });
+        if (!res.ok) throw new Error('Failed to revoke key');
+        router.refresh();
+      } catch (err: any) {
+        alert(err.message || 'Something went wrong');
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
-  const handleCreateKey = () => {
-    alert("Create new master key action would be triggered here.");
-    // TODO: Implement actual API call to POST /api/apikey
+  const handleCreateKey = async () => {
+    try {
+      setIsLoading(true);
+      const res = await fetch('/api/keys/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'Master Key' })
+      });
+      if (!res.ok) throw new Error('Failed to create key');
+      router.refresh();
+    } catch (err: any) {
+      alert(err.message || 'Something went wrong');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -56,9 +83,10 @@ export default function ApiKeysManager({ apiKeys = [] }: ApiKeysManagerProps) {
         </div>
         <button
           onClick={handleCreateKey}
-          style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 16px', fontSize: '0.875rem', fontWeight: 500, cursor: 'pointer' }}
+          disabled={isLoading}
+          style={{ display: 'flex', alignItems: 'center', gap: '8px', background: isLoading ? '#6b7280' : '#3b82f6', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 16px', fontSize: '0.875rem', fontWeight: 500, cursor: isLoading ? 'not-allowed' : 'pointer' }}
         >
-          <Plus style={{ width: '16px', height: '16px' }} />
+          {isLoading ? <Loader2 style={{ width: '16px', height: '16px' }} className="animate-spin" /> : <Plus style={{ width: '16px', height: '16px' }} />}
           Create Master Key
         </button>
       </div>
@@ -82,9 +110,10 @@ export default function ApiKeysManager({ apiKeys = [] }: ApiKeysManagerProps) {
                     <p style={{ margin: 0 }}>No master keys found. Create one to connect your AI assistant.</p>
                     <button
                       onClick={handleCreateKey}
-                      style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: '#fff', color: '#000', border: 'none', borderRadius: '6px', padding: '8px 16px', fontSize: '0.875rem', fontWeight: 500, cursor: 'pointer', marginTop: '8px' }}
+                      disabled={isLoading}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: isLoading ? '#d1d5db' : '#fff', color: '#000', border: 'none', borderRadius: '6px', padding: '8px 16px', fontSize: '0.875rem', fontWeight: 500, cursor: isLoading ? 'not-allowed' : 'pointer', marginTop: '8px' }}
                     >
-                      <Plus style={{ width: '16px', height: '16px' }} />
+                      {isLoading ? <Loader2 style={{ width: '16px', height: '16px' }} className="animate-spin" /> : <Plus style={{ width: '16px', height: '16px' }} />}
                       Create Master Key
                     </button>
                   </div>
@@ -133,14 +162,15 @@ export default function ApiKeysManager({ apiKeys = [] }: ApiKeysManagerProps) {
 
                       <button 
                         onClick={() => handleRevoke(key.id)}
+                        disabled={isLoading}
                         style={{ 
                           display: 'flex', alignItems: 'center', gap: '6px', 
                           padding: '6px 12px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', 
-                          borderRadius: '6px', color: '#ef4444', fontSize: '0.75rem', cursor: 'pointer',
+                          borderRadius: '6px', color: isLoading ? '#9ca3af' : '#ef4444', fontSize: '0.75rem', cursor: isLoading ? 'not-allowed' : 'pointer',
                           transition: 'all 0.2s'
                         }}
                       >
-                        <Trash2 style={{ width: '14px', height: '14px' }} />
+                        {isLoading ? <Loader2 style={{ width: '14px', height: '14px' }} className="animate-spin" /> : <Trash2 style={{ width: '14px', height: '14px' }} />}
                         Revoke
                       </button>
                     </div>
