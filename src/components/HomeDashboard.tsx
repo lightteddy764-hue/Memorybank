@@ -192,7 +192,7 @@ export default function HomeDashboard({ projects, memories, onSelectProject, onO
                 { title: 'Claude stored new memories', proj: 'Content Creation Hub', time: '3h ago', color: '#f97316', icon: 'C' }
               ].map((activity, i) => (
                 <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
-                  <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: \`rgba(255,255,255,0.05)\`, color: activity.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 600 }}>
+                  <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: `rgba(255,255,255,0.05)`, color: activity.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 600 }}>
                     {activity.icon}
                   </div>
                   <div style={{ flex: 1 }}>
@@ -229,7 +229,7 @@ export default function HomeDashboard({ projects, memories, onSelectProject, onO
                 // Generate a bell curve-like height
                 const height = Math.max(10, Math.sin(i / 12) * 80 + Math.random() * 20);
                 return (
-                  <div key={i} style={{ flex: 1, background: '#fff', height: \`\${height}%\`, borderRadius: '1px 1px 0 0', opacity: i > 30 ? 0.3 : 1 }} />
+                  <div key={i} style={{ flex: 1, background: '#fff', height: `${height}%`, borderRadius: '1px 1px 0 0', opacity: i > 30 ? 0.3 : 1 }} />
                 );
               })}
             </div>
