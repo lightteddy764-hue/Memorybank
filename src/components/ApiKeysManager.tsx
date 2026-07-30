@@ -203,6 +203,71 @@ export default function ApiKeysManager({ apiKeys = [] }: ApiKeysManagerProps) {
           </p>
         </div>
       </div>
+
+      {/* Autonomous Zero-Touch Setup Feature */}
+      <div className="glass-panel" style={{ marginTop: '32px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '20px' }}>
+          <div>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 600, color: '#fff', margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Sparkles style={{ width: '20px', height: '20px', color: '#8b5cf6' }} />
+              Zero-Touch AI Autonomous Setup
+            </h3>
+            <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.6, maxWidth: '800px' }}>
+              Don't want to create projects manually in the dashboard? Copy this Global Setup Prompt into your IDE (Cursor, Claude, etc.) when starting a new codebase. Your AI will autonomously ping our server, create the project, save the local ID, and begin tracking your workflow invisibly.
+            </p>
+          </div>
+          <button 
+            onClick={() => {
+              const origin = typeof window !== 'undefined' ? window.location.origin : 'https://your-domain.com';
+              const sampleKey = apiKeys.length > 0 ? apiKeys[0].api_key : '[USER_PASTES_KEY_HERE]';
+              const prompt = `# SYSTEM INSTRUCTION: MEMORY BANK AUTONOMOUS SETUP
+You are connected to an external Memory Bank designed to track every detail of this project.
+
+**Your Master Configuration:**
+- Global Setup Endpoint: \`${origin}/api/project/create\`
+- Master API Key: \`${sampleKey}\`
+
+**Setup Directives (RUN IMMEDIATELY IF NO PROJECT ID EXISTS):**
+1. Check if a local \`.memorybank-id\` file exists in the root of this repository.
+2. If it DOES NOT exist, you must create a new project by making a POST request to the Global Setup Endpoint:
+   - Header: \`Authorization: Bearer [Master API Key]\`
+   - Body: \`{"name": "Auto-Generated Project - [Insert Repo Name]", "description": "Project created autonomously from IDE"}\`
+3. The API will respond with a JSON object containing \`project.id\`. Save this ID to a file named \`.memorybank-id\`.
+
+**Memory Directives (RUN AFTER SETUP):**
+1. **Be Exhaustive:** Document ALL project details, stack choices, and architecture decisions.
+2. **Continuous Updates:** After every prompt or set of changes, use \`curl\` to POST a summary to \`${origin}/api/memory/add\`.
+   - Include the Master API Key in the Authorization header.
+   - Include the \`project_id\` (from \`.memorybank-id\`) in the JSON body.
+3. **Immutable History:** Append-only. Do not attempt to overwrite or delete old facts. Add new facts as new memories.`;
+              
+              navigator.clipboard.writeText(prompt);
+              showToast({ message: 'Global AI Setup Prompt copied to clipboard!', type: 'success' });
+            }}
+            className="btn-primary" 
+            style={{ 
+              background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)', 
+              color: '#fff', 
+              border: 'none', 
+              padding: '10px 20px', 
+              borderRadius: '8px', 
+              fontWeight: 600,
+              boxShadow: '0 4px 15px rgba(139, 92, 246, 0.3)',
+              flexShrink: 0
+            }}
+          >
+            <Copy style={{ width: '18px', height: '18px', display: 'inline-block', marginRight: '8px', verticalAlign: 'text-bottom' }} />
+            Copy Global Prompt
+          </button>
+        </div>
+
+        <div style={{ background: '#000', border: '1px solid var(--border-light)', borderRadius: '8px', padding: '16px', overflowX: 'auto' }}>
+          <pre style={{ margin: 0, fontSize: '0.8rem', color: '#ededed', fontFamily: 'monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+            {`# SYSTEM INSTRUCTION: MEMORY BANK AUTONOMOUS SETUP
+You are connected to an external Memory Bank designed to track every detail of this project... (Click copy to get the full prompt with your injected Master Key)`}
+          </pre>
+        </div>
+      </div>
     </div>
   );
 }

@@ -10,10 +10,10 @@ export async function POST(request: Request) {
     
     const apiKey = authHeader.replace('Bearer ', '');
 
-    // Look up existing master key to inherit user_ip for zero-login scope
+    // Look up existing master key to inherit user_id for zero-login scope
     const { data: userKey, error: keyErr } = await supabaseAdmin
       .from('user_api_keys')
-      .select('user_ip')
+      .select('user_id')
       .eq('api_key', apiKey)
       .single();
 
@@ -34,7 +34,8 @@ export async function POST(request: Request) {
         { 
           name: name.trim(), 
           description: description || '', 
-          user_ip: userKey.user_ip 
+          user_id: userKey.user_id,
+          user_ip: '0.0.0.0' // Legacy fallback
         }
       ])
       .select()
