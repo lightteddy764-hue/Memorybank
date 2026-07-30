@@ -39,9 +39,10 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         inputSchema: {
           type: "object",
           properties: {
+            project_id: { type: "string", description: "The UUID of the project to search within" },
             query: { type: "string", description: "What to search for" },
           },
-          required: ["query"],
+          required: ["project_id", "query"],
         },
       },
       {
@@ -50,6 +51,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         inputSchema: {
           type: "object",
           properties: {
+            project_id: { type: "string", description: "The UUID of the project to add the memory to" },
             content: { type: "string", description: "The detailed context or lesson to save" },
             type: { 
               type: "string", 
@@ -67,7 +69,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
               description: "Optional list of UUIDs of past related memories to connect in the knowledge graph"
             }
           },
-          required: ["content", "type"],
+          required: ["project_id", "content", "type"],
         },
       },
       {
@@ -75,7 +77,10 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         description: "Get an instant <50ms profile of the connected project including static architecture facts, active context, and top knowledge graph nodes.",
         inputSchema: {
           type: "object",
-          properties: {},
+          properties: {
+            project_id: { type: "string", description: "The UUID of the project to profile" }
+          },
+          required: ["project_id"],
         },
       },
       {

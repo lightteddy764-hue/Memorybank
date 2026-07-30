@@ -10,14 +10,14 @@ export async function POST(request: Request) {
     
     const apiKey = authHeader.replace('Bearer ', '');
 
-    // Look up existing project to find user_ip
-    const { data: existingProj, error: projErr } = await supabaseAdmin
-      .from('projects')
+    // Look up existing master key to find user_ip
+    const { data: userKey, error: keyErr } = await supabaseAdmin
+      .from('user_api_keys')
       .select('user_ip')
       .eq('api_key', apiKey)
       .single();
 
-    if (projErr || !existingProj) {
+    if (keyErr || !userKey) {
       return NextResponse.json({ error: 'Invalid API Key provided in Authorization header' }, { status: 401 });
     }
 
@@ -26,8 +26,8 @@ export async function POST(request: Request) {
       .select('id, name, description, api_key, created_at, user_ip')
       .order('created_at', { ascending: false });
 
-    if (existingProj.user_ip) {
-      query = query.eq('user_ip', existingProj.user_ip);
+    if (userKey.user_ip) {
+      query = query.eq('user_ip', userKey.user_ip);
     } else {
       query = query.limit(20);
     }

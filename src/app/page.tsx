@@ -33,10 +33,18 @@ export default async function Home() {
         .then(r => r.data || [])
     : [];
 
+  const userApiKeys = await supabaseAdmin
+    .from('user_api_keys')
+    .select('*')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false })
+    .then(r => r.data || []);
+
   return (
     <DashboardLayout
       projects={projects || []}
       memories={memories}
+      apiKeys={userApiKeys}
       userEmail={user.email || 'user@example.com'}
       userName={user.user_metadata?.full_name || 'Udita'}
     />

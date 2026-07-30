@@ -10,20 +10,37 @@ export async function POST(request: Request) {
 
     const apiKey = authHeader.replace('Bearer ', '');
 
-    // Validate API key and get project in one query
-    const { data: project, error: projectError } = await supabaseAdmin
-      .from('projects')
-      .select('id')
+    // Validate master key
+    const { data: userKey, error: keyErr } = await supabaseAdmin
+      .from('user_api_keys')
+      .select('user_id')
       .eq('api_key', apiKey)
       .single();
 
-    if (projectError || !project) {
+    if (keyErr || !userKey) {
       return NextResponse.json({ error: 'Invalid API Key' }, { status: 401 });
     }
 
-    const { query } = await request.json();
+    const { project_id, query } = await request.json();
+
+    if (!project_id) {
+      return NextResponse.json({ error: 'project_id is required' }, { status: 400 });
+    }
+
     if (!query || typeof query !== 'string' || !query.trim()) {
       return NextResponse.json({ error: 'query is required' }, { status: 400 });
+    }
+
+    // Verify project access
+    const { data: project, error: projectError } = await supabaseAdmin
+      .from('projects')
+      .select('id')
+      .eq('id', project_id)
+      .eq('user_id', userKey.user_id)
+      .single();
+
+    if (projectError || !project) {
+      return NextResponse.json({ error: 'Project not found or unauthorized' }, { status: 404 });
     }
 
     const queryTrimmed = query.trim();

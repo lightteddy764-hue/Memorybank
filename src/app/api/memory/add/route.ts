@@ -85,21 +85,37 @@ export async function POST(request: Request) {
     
     const apiKey = authHeader.replace('Bearer ', '');
 
-    // Look up the project using the API Key
-    const { data: project, error: projectError } = await supabaseAdmin
-      .from('projects')
-      .select('id')
+    // Look up the master key
+    const { data: userKey, error: keyErr } = await supabaseAdmin
+      .from('user_api_keys')
+      .select('user_id')
       .eq('api_key', apiKey)
       .single();
 
-    if (projectError || !project) {
+    if (keyErr || !userKey) {
       return NextResponse.json({ error: 'Invalid API Key' }, { status: 401 });
     }
 
-    const { content, type, entities, related_memory_ids } = await request.json();
+    const { project_id, content, type, entities, related_memory_ids } = await request.json();
+
+    if (!project_id) {
+      return NextResponse.json({ error: 'project_id is required since this is a global master key' }, { status: 400 });
+    }
 
     if (!content) {
       return NextResponse.json({ error: 'content is required' }, { status: 400 });
+    }
+
+    // Verify the project belongs to this user_ip
+    const { data: project, error: projectError } = await supabaseAdmin
+      .from('projects')
+      .select('id')
+      .eq('id', project_id)
+      .eq('user_id', userKey.user_id)
+      .single();
+
+    if (projectError || !project) {
+      return NextResponse.json({ error: 'Project not found or you do not have permission' }, { status: 404 });
     }
 
     // Auto-infer type from content if not provided or invalid (Cognee pattern)

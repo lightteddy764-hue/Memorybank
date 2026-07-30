@@ -33,14 +33,24 @@ interface Memory {
   created_at: string;
 }
 
+interface UserApiKey {
+  id: string;
+  user_id: string;
+  name: string;
+  api_key: string;
+  created_at: string;
+}
+
 export default function DashboardLayout({
   projects,
   memories,
+  apiKeys,
   userEmail,
   userName
 }: {
   projects: Project[];
   memories: Memory[];
+  apiKeys: UserApiKey[];
   userEmail: string;
   userName: string;
 }) {
@@ -80,7 +90,7 @@ export default function DashboardLayout({
       case 'Knowledge Graph':
         return <KnowledgeGraphView projects={projects} memories={memories} />;
       case 'API Keys':
-        return <ApiKeysManager projects={projects} />;
+        return <ApiKeysManager apiKeys={apiKeys} />;
       case 'Usage':
         return <AnalyticsDashboard projects={projects} memories={memories} />;
       case 'Settings':
